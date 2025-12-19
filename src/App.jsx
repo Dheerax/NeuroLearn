@@ -9,7 +9,10 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { UserProvider } from "./context/UserContext";
 import { TaskProvider } from "./context/TaskContext";
 import { GamificationProvider } from "./context/GamificationContext";
+import { FocusMonitorProvider } from "./context/FocusMonitorContext";
+import { FocusProvider } from "./context/FocusContext";
 import Layout from "./components/Layout/Layout";
+import DistractionAlert from "./components/DistractionAlert";
 import Dashboard from "./pages/Dashboard";
 import TasksPage from "./pages/TasksPage";
 import LearningPage from "./pages/LearningPage";
@@ -18,6 +21,7 @@ import FocusMode from "./pages/FocusMode";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import GamesPage from "./pages/GamesPage";
 
 // Protected Route component
 function ProtectedRoute({ children }) {
@@ -95,6 +99,7 @@ function AppRoutes() {
         <Route path="learning" element={<LearningPage />} />
         <Route path="communication" element={<CommunicationPage />} />
         <Route path="focus" element={<FocusMode />} />
+        <Route path="games" element={<GamesPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
@@ -109,7 +114,12 @@ function App() {
           <UserProvider>
             <TaskProvider>
               <GamificationProvider>
-                <AppRoutes />
+                <FocusMonitorProvider>
+                  <FocusProvider>
+                    <AppRoutes />
+                    <DistractionAlert />
+                  </FocusProvider>
+                </FocusMonitorProvider>
               </GamificationProvider>
             </TaskProvider>
           </UserProvider>

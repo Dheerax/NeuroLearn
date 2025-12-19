@@ -10,6 +10,7 @@ dotenv.config();
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
 import taskRoutes from "./routes/tasks.js";
+import focusRoutes from "./routes/focus.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -32,6 +33,7 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/focus", focusRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

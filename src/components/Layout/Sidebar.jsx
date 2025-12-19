@@ -7,6 +7,7 @@ import {
   BookOpen,
   MessageCircle,
   Timer,
+  Gamepad2,
   Settings,
   Brain,
   ChevronLeft,
@@ -48,6 +49,12 @@ const NAV_ITEMS = [
     icon: Timer,
     label: "Focus Mode",
     description: "Pomodoro timer",
+  },
+  {
+    path: "/games",
+    icon: Gamepad2,
+    label: "Games",
+    description: "Focus games",
   },
   {
     path: "/settings",

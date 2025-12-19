@@ -17,6 +17,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useTheme, THEMES } from "../context/ThemeContext";
 import { useNavigate } from "react-router-dom";
+import { FocusMonitorToggle } from "../components/FocusMonitorUI";
 
 const CONDITIONS = [
   {
@@ -360,6 +361,15 @@ export default function SettingsPage() {
 
       {/* Focus Settings */}
       <SettingsSection icon={Clock} title="Focus Settings" delay={0.25}>
+        {/* AI Focus Monitoring */}
+        <div className="mb-6">
+          <FocusMonitorToggle />
+          <p className="text-xs text-text-tertiary mt-2 ml-14">
+            Uses your webcam to detect focus level periodically and suggest
+            breaks or games when distracted.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label

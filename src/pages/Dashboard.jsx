@@ -17,10 +17,12 @@ import {
   Zap,
   Brain,
   Heart,
+  Gamepad2,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTasks } from "../context/TaskContext";
 import { useGamification } from "../context/GamificationContext";
+import { FocusStatusIndicator } from "../components/FocusMonitorUI";
 
 // Animated counter component
 function AnimatedNumber({ value, duration = 1000 }) {
@@ -307,8 +309,24 @@ export default function Dashboard() {
             color="#8b5cf6"
             delay={0.4}
           />
+          <QuickAction
+            to="/games"
+            icon={Gamepad2}
+            label="Games"
+            color="#ec4899"
+            delay={0.5}
+          />
         </div>
       </div>
+
+      {/* Focus Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <FocusStatusIndicator />
+      </motion.div>
 
       {/* Two Column Layout */}
       <div className="grid lg:grid-cols-2 gap-6">
