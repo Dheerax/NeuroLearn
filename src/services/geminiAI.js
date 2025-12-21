@@ -3,7 +3,13 @@
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent";
+
+// Check if API is enabled (controlled by toggle in header)
+const isApiEnabled = () => {
+  const saved = localStorage.getItem("neurolearn_api_enabled");
+  return saved !== null ? saved === "true" : true;
+};
 
 // System prompts for different contexts
 const SYSTEM_PROMPTS = {
@@ -73,6 +79,14 @@ export async function chat(
   context = "companion",
   conversationHistory = []
 ) {
+  // Check if API is disabled
+  if (!isApiEnabled()) {
+    return {
+      success: false,
+      message: "API is disabled. Enable it from the header toggle.",
+    };
+  }
+
   const systemPrompt = SYSTEM_PROMPTS[context] || SYSTEM_PROMPTS.companion;
 
   const contents = [
@@ -422,6 +436,14 @@ export async function practiceConversation(
   userMessage,
   history = []
 ) {
+  // Check if API is disabled
+  if (!isApiEnabled()) {
+    return {
+      response: "API is disabled. Enable it from the header toggle.",
+      coachTip: null,
+    };
+  }
+
   const systemPrompt = `You are playing a character in a social skills practice scenario.
 Scenario: ${scenario}
 
@@ -559,6 +581,17 @@ Keep it practical and memorizable.`;
 
 // Generate daily social challenge
 export async function getDailySocialChallenge(difficulty = "beginner") {
+  // Check if API is disabled - return default challenge
+  if (!isApiEnabled()) {
+    return {
+      title: "Say Hi",
+      description: "API disabled - using default challenge",
+      tips: ["Enable API for personalized challenges"],
+      xpReward: 20,
+      category: "greeting",
+    };
+  }
+
   const prompt = `Create a small, achievable social skills challenge for today.
 Difficulty: ${difficulty}
 

@@ -13,6 +13,7 @@ import {
   Moon,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useGamification } from "../../context/GamificationContext";
@@ -29,6 +30,16 @@ export default function Header() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [apiEnabled, setApiEnabled] = useState(() => {
+    const saved = localStorage.getItem("neurolearn_api_enabled");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const toggleApi = () => {
+    const newValue = !apiEnabled;
+    setApiEnabled(newValue);
+    localStorage.setItem("neurolearn_api_enabled", String(newValue));
+  };
 
   // Close menus on route change
   useEffect(() => {
@@ -111,6 +122,29 @@ export default function Header() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-2">
+          {/* API Toggle */}
+          <button
+            onClick={toggleApi}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-full cursor-pointer transition-all"
+            style={{ background: "var(--bg-tertiary)" }}
+            title={
+              apiEnabled
+                ? "API Enabled - Click to disable"
+                : "API Disabled - Click to enable"
+            }
+          >
+            <div
+              className="w-2.5 h-2.5 rounded-full transition-colors"
+              style={{ background: apiEnabled ? "#22c55e" : "#ef4444" }}
+            />
+            <span
+              className="text-xs font-medium hidden sm:inline"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              AI
+            </span>
+          </button>
+
           {/* Mobile Search */}
           <button
             className="md:hidden btn-icon"
