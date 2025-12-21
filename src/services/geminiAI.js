@@ -1,9 +1,7 @@
 // Gemini AI Service for NeuroLearn
 // This service provides AI-powered features for neurodivergent users
 
-const GEMINI_API_KEY =
-  import.meta.env.VITE_GEMINI_API_KEY ||
-  "AIzaSyAIQOAMNuYtVTtEUbxtR2bb1tBuyFjS2RE";
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent";
 

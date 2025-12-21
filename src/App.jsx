@@ -119,7 +119,6 @@ function App() {
                   <FocusProvider>
                     <AppRoutes />
                     <DistractionAlert />
-                    <AICompanion />
                   </FocusProvider>
                 </FocusMonitorProvider>
               </GamificationProvider>
