@@ -1,369 +1,1314 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  BookOpen,
-  Video,
-  Headphones,
-  FileText,
+  Brain,
+  Sparkles,
   Layers,
-  Play,
-  Clock,
-  Star,
-  CheckCircle,
-  Lock,
-  ChevronRight,
+  Target,
+  Send,
+  ArrowRight,
+  Volume2,
+  VolumeX,
+  Copy,
+  Check,
+  BookOpen,
+  ChevronDown,
+  MessageCircle,
+  ListChecks,
+  Loader2,
+  Trash2,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { useGamification } from "../context/GamificationContext";
+import geminiAI from "../services/geminiAI";
+import ReactMarkdown from "react-markdown";
 
-const FORMATS = [
-  {
-    id: "visual",
-    name: "Visual",
-    icon: Video,
-    color: "#3b82f6",
-    description: "Videos & infographics",
-  },
-  {
-    id: "audio",
-    name: "Audio",
-    icon: Headphones,
-    color: "#8b5cf6",
-    description: "Podcasts & narration",
-  },
-  {
-    id: "text",
-    name: "Text",
-    icon: FileText,
-    color: "#10b981",
-    description: "Articles & guides",
-  },
-  {
-    id: "mixed",
-    name: "Mixed",
-    icon: Layers,
-    color: "#f59e0b",
-    description: "All formats combined",
-  },
-];
+// Markdown renderer component
+const MarkdownRenderer = ({ content }) => {
+  return (
+    <ReactMarkdown
+      components={{
+        h1: ({ children }) => (
+          <h1
+            className="text-xl font-bold mt-4 mb-2"
+            style={{ color: "var(--accent-color, var(--primary-500))" }}
+          >
+            {children}
+          </h1>
+        ),
+        h2: ({ children }) => (
+          <h2
+            className="text-lg font-bold mt-4 mb-2"
+            style={{ color: "var(--accent-color, var(--primary-500))" }}
+          >
+            {children}
+          </h2>
+        ),
+        h3: ({ children }) => (
+          <h3
+            className="text-base font-semibold mt-3 mb-1"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {children}
+          </h3>
+        ),
+        p: ({ children }) => (
+          <p
+            className="mb-2 leading-relaxed text-sm"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {children}
+          </p>
+        ),
+        ul: ({ children }) => (
+          <ul
+            className="list-disc list-inside mb-3 space-y-1 ml-2 text-sm"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {children}
+          </ul>
+        ),
+        ol: ({ children }) => (
+          <ol
+            className="list-decimal list-inside mb-3 space-y-1 ml-2 text-sm"
+            style={{ color: "var(--text-primary)" }}
+          >
+            {children}
+          </ol>
+        ),
+        li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+        strong: ({ children }) => (
+          <strong
+            className="font-bold"
+            style={{ color: "var(--accent-color, var(--primary-400))" }}
+          >
+            {children}
+          </strong>
+        ),
+        em: ({ children }) => (
+          <em className="italic" style={{ color: "var(--text-secondary)" }}>
+            {children}
+          </em>
+        ),
+        code: ({ children, inline }) =>
+          inline ? (
+            <code
+              className="px-1 py-0.5 rounded text-xs"
+              style={{
+                background: "var(--bg-tertiary)",
+                color: "var(--accent-color, var(--primary-400))",
+              }}
+            >
+              {children}
+            </code>
+          ) : (
+            <code
+              className="block p-3 rounded-lg text-xs overflow-x-auto my-2"
+              style={{
+                background: "var(--bg-primary)",
+                color: "var(--text-primary)",
+              }}
+            >
+              {children}
+            </code>
+          ),
+        pre: ({ children }) => (
+          <pre className="rounded-lg overflow-hidden my-2">{children}</pre>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote
+            className="border-l-3 pl-3 my-3 italic text-sm"
+            style={{
+              borderColor: "var(--accent-color, var(--primary-500))",
+              color: "var(--text-secondary)",
+            }}
+          >
+            {children}
+          </blockquote>
+        ),
+        table: ({ children }) => (
+          <div className="overflow-x-auto my-3">
+            <table
+              className="w-full border-collapse text-sm rounded-lg overflow-hidden"
+              style={{ background: "var(--bg-tertiary)" }}
+            >
+              {children}
+            </table>
+          </div>
+        ),
+        thead: ({ children }) => (
+          <thead style={{ background: "var(--surface-active)" }}>
+            {children}
+          </thead>
+        ),
+        th: ({ children }) => (
+          <th
+            className="px-3 py-2 text-left text-xs font-semibold"
+            style={{
+              color: "var(--text-primary)",
+              borderBottom: "1px solid var(--border-medium)",
+            }}
+          >
+            {children}
+          </th>
+        ),
+        td: ({ children }) => (
+          <td
+            className="px-3 py-2 text-xs"
+            style={{
+              color: "var(--text-primary)",
+              borderBottom: "1px solid var(--border-light)",
+            }}
+          >
+            {children}
+          </td>
+        ),
+        hr: () => (
+          <hr className="my-4" style={{ borderColor: "var(--border-light)" }} />
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+};
 
-const LESSONS = [
+// Response depth options
+const DEPTH_OPTIONS = [
+  { id: "minimal", label: "Quick", icon: "⚡", description: "Brief overview" },
+  { id: "medium", label: "Balanced", icon: "📚", description: "Good detail" },
   {
-    id: 1,
-    title: "Understanding Your Brain",
-    description: "Learn how your unique brain works",
-    duration: 15,
-    progress: 100,
-    completed: true,
-    icon: "🧠",
-  },
-  {
-    id: 2,
-    title: "Focus Techniques",
-    description: "Master concentration strategies",
-    duration: 20,
-    progress: 60,
-    completed: false,
-    icon: "🎯",
-  },
-  {
-    id: 3,
-    title: "Task Management",
-    description: "Break down complex tasks",
-    duration: 25,
-    progress: 0,
-    completed: false,
-    icon: "📋",
-  },
-  {
-    id: 4,
-    title: "Emotional Regulation",
-    description: "Handle overwhelming feelings",
-    duration: 18,
-    progress: 0,
-    completed: false,
-    locked: true,
-    icon: "💭",
+    id: "extensive",
+    label: "Deep Dive",
+    icon: "🔬",
+    description: "Full breakdown",
   },
 ];
 
 export default function LearningPage() {
-  const { user } = useAuth();
-  const [selectedFormat, setSelectedFormat] = useState(
-    user?.preferences?.learningStyle || "visual"
-  );
-  const [selectedLesson, setSelectedLesson] = useState(null);
+  const { stats, addXP } = useGamification();
 
-  const currentFormat = FORMATS.find((f) => f.id === selectedFormat);
+  // States
+  const [activeTab, setActiveTab] = useState("explore");
+  const [topic, setTopic] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [responseDepth, setResponseDepth] = useState("medium");
+  const [showDepthDropdown, setShowDepthDropdown] = useState(false);
+
+  // Chat states
+  const [messages, setMessages] = useState([]);
+  const [conversationHistory, setConversationHistory] = useState([]);
+
+  // Flashcard states
+  const [flashcards, setFlashcards] = useState([]);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  // Quiz states
+  const [quiz, setQuiz] = useState([]);
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [quizScore, setQuizScore] = useState(0);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [quizTopic, setQuizTopic] = useState("");
+
+  // UI states
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const inputRef = useRef(null);
+  const chatEndRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDepthDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getDepthPrompt = (depth) => {
+    switch (depth) {
+      case "minimal":
+        return "Give a BRIEF explanation in 3-4 sentences. Essential facts only.";
+      case "medium":
+        return "Give a balanced explanation with key points, one analogy, and one example.";
+      case "extensive":
+        return "Give a COMPREHENSIVE deep-dive with:\n- Detailed key points with headers\n- Multiple examples\n- Tables where helpful\n- Real-world applications\n- Step-by-step breakdowns";
+      default:
+        return "";
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!topic.trim() || isLoading) return;
+
+    const userMessage = topic.trim();
+    setTopic("");
+    setIsLoading(true);
+
+    const newUserMessage = { role: "user", content: userMessage };
+    setMessages((prev) => [...prev, newUserMessage]);
+
+    try {
+      const depthInstruction = getDepthPrompt(responseDepth);
+      const fullPrompt = `${depthInstruction}\n\nUser question: ${userMessage}`;
+
+      const response = await geminiAI.chat(
+        fullPrompt,
+        "learning",
+        conversationHistory
+      );
+
+      const aiMessage = {
+        role: "assistant",
+        content: response.message,
+        topic: userMessage,
+        depth: responseDepth,
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+      setConversationHistory((prev) => [
+        ...prev,
+        newUserMessage,
+        { role: "assistant", content: response.message },
+      ]);
+      addXP(15, "topic_explored");
+    } catch (error) {
+      console.error("Error:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Oops! Something went wrong. Please try again. 💙",
+          isError: true,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateQuizFromTopic = async (topicToQuiz) => {
+    setActiveTab("quiz");
+    setIsLoading(true);
+    setQuiz([]);
+    setQuizIndex(0);
+    setQuizScore(0);
+    setSelectedAnswer(null);
+    setQuizTopic(topicToQuiz);
+
+    try {
+      const questions = await geminiAI.generateQuiz(topicToQuiz);
+      setQuiz(questions);
+      addXP(25, "quiz_started");
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateFlashcards = async (topicForCards) => {
+    const t = topicForCards || topic;
+    if (!t.trim() || isLoading) return;
+    setActiveTab("flashcards");
+    setIsLoading(true);
+    setFlashcards([]);
+    setCurrentCardIndex(0);
+    setIsFlipped(false);
+
+    try {
+      const cards = await geminiAI.generateFlashcards(t);
+      setFlashcards(cards);
+      addXP(20, "flashcards_generated");
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const speakText = (text) => {
+    if (isSpeaking) {
+      speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(text.replace(/[#*_`]/g, ""));
+    utterance.rate = 0.9;
+    utterance.onend = () => setIsSpeaking(false);
+    speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
+
+  const copyText = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    setConversationHistory([]);
+  };
+
+  const tabs = [
+    { id: "explore", label: "Chat", icon: Brain },
+    { id: "flashcards", label: "Cards", icon: Layers },
+    { id: "quiz", label: "Quiz", icon: Target },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <h1
-          className="text-2xl font-display font-bold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Learning Hub
-        </h1>
-        <p style={{ color: "var(--text-secondary)" }}>
-          Choose your preferred learning style
-        </p>
-      </motion.div>
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{ background: "var(--bg-primary)" }}
+    >
+      {/* Animated Background Orbs - Theme Based */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          className="absolute top-[-15%] right-[-5%] w-[500px] h-[500px] rounded-full blur-3xl"
+          style={{
+            background:
+              "var(--gradient-orb-1, radial-gradient(circle, rgba(93,156,236,0.15) 0%, transparent 70%))",
+          }}
+          animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.7, 0.5] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-[-20%] left-[-10%] w-[400px] h-[400px] rounded-full blur-3xl"
+          style={{
+            background:
+              "var(--gradient-orb-2, radial-gradient(circle, rgba(58,123,213,0.12) 0%, transparent 70%))",
+          }}
+          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.6, 0.4] }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: 1,
+          }}
+        />
+      </div>
 
-      {/* Format Selection */}
-      <motion.div
-        className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-      >
-        {FORMATS.map((format, index) => (
-          <motion.button
-            key={format.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + index * 0.05 }}
-            onClick={() => setSelectedFormat(format.id)}
-            className={`card text-center p-6 transition-all ${
-              selectedFormat === format.id ? "ring-2" : ""
-            }`}
-            style={{
-              ringColor: format.color,
-              borderColor:
-                selectedFormat === format.id
-                  ? format.color
-                  : "var(--border-light)",
-            }}
-            whileHover={{ y: -4 }}
-          >
+      {/* Compact Header */}
+      <div className="relative z-10 shrink-0 px-4 pt-3 pb-2">
+        <div className="flex items-center justify-between">
+          {/* Left: Title */}
+          <div className="flex items-center gap-2">
             <div
-              className="w-14 h-14 rounded-2xl mx-auto mb-3 flex items-center justify-center"
-              style={{ background: `${format.color}20` }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "var(--gradient-primary)" }}
             >
-              <format.icon
-                className="w-7 h-7"
-                style={{ color: format.color }}
-              />
+              <Brain className="w-4 h-4 text-white" />
             </div>
-            <h3
-              className="font-semibold"
+            <h1
+              className="text-lg font-bold"
               style={{ color: "var(--text-primary)" }}
             >
-              {format.name}
-            </h3>
-            <p
-              className="text-xs mt-1"
-              style={{ color: "var(--text-tertiary)" }}
-            >
-              {format.description}
-            </p>
-          </motion.button>
-        ))}
-      </motion.div>
+              Learning Hub
+            </h1>
+          </div>
 
-      {/* Current Format Banner */}
-      <motion.div
-        className="rounded-2xl p-6 flex items-center gap-4"
-        style={{
-          background: `linear-gradient(135deg, ${currentFormat?.color}20, ${currentFormat?.color}10)`,
-          border: `1px solid ${currentFormat?.color}30`,
-        }}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: currentFormat?.color }}
-        >
-          {currentFormat && (
-            <currentFormat.icon className="w-6 h-6 text-white" />
-          )}
-        </div>
-        <div>
-          <h3
-            className="font-semibold"
-            style={{ color: "var(--text-primary)" }}
+          {/* Center: Tabs */}
+          <div
+            className="flex p-0.5 rounded-full"
+            style={{
+              background: "var(--bg-tertiary)",
+              border: "1px solid var(--border-light)",
+            }}
           >
-            {currentFormat?.name} Learning Mode Active
-          </h3>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Content will be optimized for{" "}
-            {currentFormat?.description.toLowerCase()}
-          </p>
-        </div>
-      </motion.div>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="relative px-4 py-1.5 rounded-full flex items-center gap-1.5 text-sm transition-all cursor-pointer"
+                style={{
+                  color:
+                    activeTab === tab.id ? "white" : "var(--text-secondary)",
+                  background:
+                    activeTab === tab.id
+                      ? "var(--gradient-primary)"
+                      : "transparent",
+                }}
+              >
+                <tab.icon className="w-3.5 h-3.5" />
+                <span className="font-medium">{tab.label}</span>
+              </button>
+            ))}
+          </div>
 
-      {/* Lessons Grid */}
-      <div>
-        <h2
-          className="text-lg font-semibold mb-4 flex items-center gap-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          <BookOpen
-            className="w-5 h-5"
-            style={{ color: "var(--primary-500)" }}
-          />
-          Your Lessons
-        </h2>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          {LESSONS.map((lesson, index) => (
-            <motion.div
-              key={lesson.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + index * 0.1 }}
-              className={`card group cursor-pointer ${
-                lesson.locked ? "opacity-60" : ""
-              }`}
-              onClick={() => !lesson.locked && setSelectedLesson(lesson)}
-              whileHover={!lesson.locked ? { y: -2 } : {}}
+          {/* Right: XP */}
+          <div
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full"
+            style={{ background: "var(--bg-tertiary)" }}
+          >
+            <Sparkles
+              className="w-3.5 h-3.5"
+              style={{ color: "var(--accent-color, var(--primary-500))" }}
+            />
+            <span
+              className="text-sm font-bold"
+              style={{ color: "var(--text-primary)" }}
             >
-              <div className="flex items-start gap-4">
-                <div
-                  className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background: "var(--bg-tertiary)" }}
-                >
-                  {lesson.icon}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3
-                      className="font-semibold truncate"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {lesson.title}
-                    </h3>
-                    {lesson.completed && (
-                      <CheckCircle
-                        className="w-4 h-4 flex-shrink-0"
-                        style={{ color: "var(--success)" }}
-                      />
-                    )}
-                    {lesson.locked && (
-                      <Lock
-                        className="w-4 h-4 flex-shrink-0"
-                        style={{ color: "var(--text-tertiary)" }}
-                      />
-                    )}
-                  </div>
-                  <p
-                    className="text-sm truncate"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {lesson.description}
-                  </p>
-
-                  <div className="flex items-center gap-3 mt-3">
-                    <span
-                      className="flex items-center gap-1 text-xs"
-                      style={{ color: "var(--text-tertiary)" }}
-                    >
-                      <Clock className="w-3 h-3" />
-                      {lesson.duration} min
-                    </span>
-
-                    {lesson.progress > 0 && !lesson.completed && (
-                      <div className="flex-1 max-w-[100px]">
-                        <div className="progress-bar h-1.5">
-                          <div
-                            className="progress-bar-fill"
-                            style={{ width: `${lesson.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {!lesson.locked && (
-                  <ChevronRight
-                    className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                    style={{ color: "var(--text-tertiary)" }}
-                  />
-                )}
-              </div>
-            </motion.div>
-          ))}
+              {stats?.totalXP || 0} XP
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Lesson Preview */}
-      {selectedLesson && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="card"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="text-lg font-semibold flex items-center gap-2"
-              style={{ color: "var(--text-primary)" }}
+      {/* Main Content - Full Height */}
+      <div className="relative z-10 flex-1 flex flex-col overflow-hidden px-4">
+        <AnimatePresence mode="wait">
+          {/* EXPLORE TAB - Chat Interface */}
+          {activeTab === "explore" && (
+            <motion.div
+              key="explore"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col overflow-hidden"
             >
-              <span className="text-2xl">{selectedLesson.icon}</span>
-              {selectedLesson.title}
-            </h2>
-            <button
-              onClick={() => setSelectedLesson(null)}
-              className="text-sm"
-              style={{ color: "var(--text-tertiary)" }}
+              {/* Chat Messages - Scrollable */}
+              <div className="flex-1 overflow-y-auto py-3 space-y-3">
+                {messages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center">
+                    <div
+                      className="w-16 h-16 rounded-2xl mb-4 flex items-center justify-center"
+                      style={{
+                        background:
+                          "var(--gradient-accent, rgba(93,156,236,0.2))",
+                      }}
+                    >
+                      <MessageCircle
+                        className="w-8 h-8"
+                        style={{
+                          color: "var(--accent-color, var(--primary-500))",
+                        }}
+                      />
+                    </div>
+                    <h3
+                      className="text-lg font-semibold mb-1"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      What do you want to learn?
+                    </h3>
+                    <p
+                      className="text-sm mb-4"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Ask anything - I'll explain it your way
+                    </p>
+
+                    {/* Quick suggestions */}
+                    <div className="flex flex-wrap gap-2 justify-center max-w-md">
+                      {[
+                        "What is JavaScript?",
+                        "Explain Photosynthesis",
+                        "ADHD learning tips",
+                        "Python basics",
+                      ].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => setTopic(suggestion)}
+                          className="px-3 py-1.5 rounded-full text-xs cursor-pointer transition-all"
+                          style={{
+                            background: "var(--bg-tertiary)",
+                            color: "var(--text-secondary)",
+                            border: "1px solid var(--border-light)",
+                          }}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {messages.map((msg, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex ${
+                          msg.role === "user" ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        {msg.role === "user" ? (
+                          <div
+                            className="max-w-[75%] px-3 py-2 rounded-2xl rounded-br-sm text-sm"
+                            style={{
+                              background: "var(--gradient-primary)",
+                              color: "white",
+                            }}
+                          >
+                            {msg.content}
+                          </div>
+                        ) : (
+                          <div
+                            className="max-w-[90%] rounded-2xl rounded-bl-sm overflow-hidden"
+                            style={{
+                              background: "var(--surface)",
+                              border: "1px solid var(--border-light)",
+                            }}
+                          >
+                            {/* Header */}
+                            <div
+                              className="flex items-center justify-between px-3 py-2"
+                              style={{
+                                borderBottom: "1px solid var(--border-light)",
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Sparkles
+                                  className="w-4 h-4"
+                                  style={{
+                                    color:
+                                      "var(--accent-color, var(--primary-500))",
+                                  }}
+                                />
+                                <span
+                                  className="text-xs font-medium"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  AI Tutor
+                                </span>
+                                {msg.depth && (
+                                  <span
+                                    className="text-xs px-1.5 py-0.5 rounded"
+                                    style={{
+                                      background: "var(--bg-tertiary)",
+                                      color: "var(--text-tertiary)",
+                                    }}
+                                  >
+                                    {
+                                      DEPTH_OPTIONS.find(
+                                        (d) => d.id === msg.depth
+                                      )?.icon
+                                    }
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => copyText(msg.content)}
+                                  className="p-1 rounded cursor-pointer hover:bg-white/10"
+                                >
+                                  {copied ? (
+                                    <Check
+                                      className="w-3 h-3"
+                                      style={{ color: "var(--success)" }}
+                                    />
+                                  ) : (
+                                    <Copy
+                                      className="w-3 h-3"
+                                      style={{ color: "var(--text-tertiary)" }}
+                                    />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => speakText(msg.content)}
+                                  className="p-1 rounded cursor-pointer hover:bg-white/10"
+                                >
+                                  {isSpeaking ? (
+                                    <VolumeX
+                                      className="w-3 h-3"
+                                      style={{ color: "var(--accent-color)" }}
+                                    />
+                                  ) : (
+                                    <Volume2
+                                      className="w-3 h-3"
+                                      style={{ color: "var(--text-tertiary)" }}
+                                    />
+                                  )}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Content */}
+                            <div className="px-3 py-2 max-h-[50vh] overflow-y-auto">
+                              <MarkdownRenderer content={msg.content} />
+                            </div>
+
+                            {/* Action buttons */}
+                            {msg.topic && !msg.isError && (
+                              <div
+                                className="px-3 py-2 flex gap-2"
+                                style={{
+                                  borderTop: "1px solid var(--border-light)",
+                                }}
+                              >
+                                <button
+                                  onClick={() =>
+                                    handleGenerateQuizFromTopic(msg.topic)
+                                  }
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer"
+                                  style={{
+                                    background: "var(--success-bg)",
+                                    color: "var(--success)",
+                                    border: "1px solid rgba(16,185,129,0.2)",
+                                  }}
+                                >
+                                  <ListChecks className="w-3.5 h-3.5" />
+                                  Quiz
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleGenerateFlashcards(msg.topic)
+                                  }
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs cursor-pointer"
+                                  style={{
+                                    background: "var(--info-bg)",
+                                    color: "var(--info)",
+                                    border: "1px solid rgba(59,130,246,0.2)",
+                                  }}
+                                >
+                                  <Layers className="w-3.5 h-3.5" />
+                                  Cards
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+
+                    {isLoading && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="flex justify-start"
+                      >
+                        <div
+                          className="px-3 py-2 rounded-2xl flex items-center gap-2"
+                          style={{
+                            background: "var(--surface)",
+                            border: "1px solid var(--border-light)",
+                          }}
+                        >
+                          <Loader2
+                            className="w-4 h-4 animate-spin"
+                            style={{ color: "var(--accent-color)" }}
+                          />
+                          <span
+                            className="text-sm"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            Thinking...
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    <div ref={chatEndRef} />
+                  </>
+                )}
+              </div>
+
+              {/* Input Area - Fixed at Bottom */}
+              <div className="shrink-0 pb-4 pt-2">
+                {messages.length > 0 && (
+                  <div className="flex justify-end mb-2">
+                    <button
+                      onClick={clearChat}
+                      className="flex items-center gap-1 text-xs px-2 py-1 rounded cursor-pointer"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      <Trash2 className="w-3 h-3" /> Clear
+                    </button>
+                  </div>
+                )}
+
+                <div
+                  className="flex items-center gap-2 p-2 rounded-xl"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-medium)",
+                  }}
+                >
+                  {/* Depth Selector */}
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setShowDepthDropdown(!showDepthDropdown)}
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-lg cursor-pointer"
+                      style={{
+                        background: "var(--bg-tertiary)",
+                        border: "1px solid var(--border-light)",
+                      }}
+                    >
+                      <span className="text-sm">
+                        {
+                          DEPTH_OPTIONS.find((d) => d.id === responseDepth)
+                            ?.icon
+                        }
+                      </span>
+                      <ChevronDown
+                        className="w-3 h-3"
+                        style={{ color: "var(--text-tertiary)" }}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {showDepthDropdown && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          className="absolute bottom-full left-0 mb-2 w-40 rounded-lg overflow-hidden z-50"
+                          style={{
+                            background: "var(--bg-elevated)",
+                            border: "1px solid var(--border-medium)",
+                            boxShadow: "var(--shadow-lg)",
+                          }}
+                        >
+                          {DEPTH_OPTIONS.map((option) => (
+                            <button
+                              key={option.id}
+                              onClick={() => {
+                                setResponseDepth(option.id);
+                                setShowDepthDropdown(false);
+                              }}
+                              className="w-full px-3 py-2 flex items-center gap-2 cursor-pointer text-left"
+                              style={{
+                                background:
+                                  responseDepth === option.id
+                                    ? "var(--bg-tertiary)"
+                                    : "transparent",
+                              }}
+                            >
+                              <span>{option.icon}</span>
+                              <div>
+                                <p
+                                  className="text-xs font-medium"
+                                  style={{ color: "var(--text-primary)" }}
+                                >
+                                  {option.label}
+                                </p>
+                                <p
+                                  className="text-xs"
+                                  style={{ color: "var(--text-tertiary)" }}
+                                >
+                                  {option.description}
+                                </p>
+                              </div>
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Input */}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && !isLoading && handleSendMessage()
+                    }
+                    placeholder="Ask anything..."
+                    className="flex-1 bg-transparent text-sm outline-none"
+                    style={{ color: "var(--text-primary)" }}
+                    disabled={isLoading}
+                  />
+
+                  {/* Send Button */}
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!topic.trim() || isLoading}
+                    className="p-2 rounded-lg cursor-pointer disabled:opacity-50"
+                    style={{ background: "var(--gradient-primary)" }}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 text-white animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 text-white" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* FLASHCARDS TAB */}
+          {activeTab === "flashcards" && (
+            <motion.div
+              key="flashcards"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col py-4"
             >
-              Close
-            </button>
-          </div>
+              {/* Topic Input */}
+              <div
+                className="flex items-center gap-2 p-2 rounded-xl mb-4"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-medium)",
+                }}
+              >
+                <Layers className="w-4 h-4" style={{ color: "var(--info)" }} />
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleGenerateFlashcards()
+                  }
+                  placeholder="Topic for flashcards..."
+                  className="flex-1 bg-transparent text-sm outline-none"
+                  style={{ color: "var(--text-primary)" }}
+                />
+                <button
+                  onClick={() => handleGenerateFlashcards()}
+                  disabled={!topic.trim() || isLoading}
+                  className="px-3 py-1.5 rounded-lg text-sm cursor-pointer disabled:opacity-50"
+                  style={{
+                    background: "var(--gradient-primary)",
+                    color: "white",
+                  }}
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Generate"
+                  )}
+                </button>
+              </div>
 
-          <div
-            className="aspect-video rounded-xl flex items-center justify-center mb-4"
-            style={{ background: "var(--bg-tertiary)" }}
-          >
-            <motion.button
-              className="w-16 h-16 rounded-full flex items-center justify-center"
-              style={{ background: "var(--gradient-primary)" }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              {flashcards.length > 0 ? (
+                <div className="flex-1 flex flex-col">
+                  <div className="flex justify-between items-center mb-3">
+                    <span
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Card {currentCardIndex + 1}/{flashcards.length}
+                    </span>
+                    <div className="flex gap-1">
+                      {flashcards.map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-2 h-2 rounded-full"
+                          style={{
+                            background:
+                              i === currentCardIndex
+                                ? "var(--accent-color)"
+                                : i < currentCardIndex
+                                ? "var(--success)"
+                                : "var(--border-medium)",
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div
+                    className="flex-1 flex items-center justify-center cursor-pointer"
+                    onClick={() => setIsFlipped(!isFlipped)}
+                    style={{ perspective: "1000px" }}
+                  >
+                    <motion.div
+                      className="w-full max-w-md aspect-[4/3] rounded-2xl p-6 flex flex-col items-center justify-center text-center"
+                      animate={{ rotateY: isFlipped ? 180 : 0 }}
+                      transition={{ duration: 0.5 }}
+                      style={{
+                        transformStyle: "preserve-3d",
+                        background: isFlipped
+                          ? "var(--success-bg)"
+                          : "var(--gradient-accent)",
+                        border: `1px solid ${
+                          isFlipped ? "var(--success)" : "var(--border-medium)"
+                        }`,
+                      }}
+                    >
+                      <div
+                        style={{ backfaceVisibility: "hidden" }}
+                        className={
+                          isFlipped ? "hidden" : "flex flex-col items-center"
+                        }
+                      >
+                        <span
+                          className="text-xs uppercase mb-3"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          Question
+                        </span>
+                        <h3
+                          className="text-lg font-semibold"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {flashcards[currentCardIndex]?.front}
+                        </h3>
+                        {flashcards[currentCardIndex]?.hint && (
+                          <p
+                            className="mt-3 text-xs px-3 py-1 rounded-full"
+                            style={{
+                              background: "var(--warning-bg)",
+                              color: "var(--warning)",
+                            }}
+                          >
+                            💡 {flashcards[currentCardIndex]?.hint}
+                          </p>
+                        )}
+                        <p
+                          className="mt-4 text-xs"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          Click to reveal
+                        </p>
+                      </div>
+                      <div
+                        style={{
+                          backfaceVisibility: "hidden",
+                          transform: "rotateY(180deg)",
+                        }}
+                        className={
+                          !isFlipped ? "hidden" : "flex flex-col items-center"
+                        }
+                      >
+                        <span
+                          className="text-xs uppercase mb-3"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          Answer
+                        </span>
+                        <p
+                          className="text-base"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {flashcards[currentCardIndex]?.back}
+                        </p>
+                      </div>
+                    </motion.div>
+                  </div>
+
+                  <div className="flex justify-center gap-3 mt-4">
+                    <button
+                      onClick={() => {
+                        setCurrentCardIndex(Math.max(0, currentCardIndex - 1));
+                        setIsFlipped(false);
+                      }}
+                      disabled={currentCardIndex === 0}
+                      className="px-4 py-2 rounded-lg text-sm cursor-pointer disabled:opacity-30"
+                      style={{
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCurrentCardIndex(
+                          Math.min(flashcards.length - 1, currentCardIndex + 1)
+                        );
+                        setIsFlipped(false);
+                      }}
+                      disabled={currentCardIndex === flashcards.length - 1}
+                      className="px-4 py-2 rounded-lg text-sm cursor-pointer disabled:opacity-30 flex items-center gap-1"
+                      style={{
+                        background: "var(--gradient-primary)",
+                        color: "white",
+                      }}
+                    >
+                      Next <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                !isLoading && (
+                  <div className="flex-1 flex flex-col items-center justify-center">
+                    <div
+                      className="w-16 h-16 rounded-2xl mb-4 flex items-center justify-center"
+                      style={{ background: "var(--info-bg)" }}
+                    >
+                      <Layers
+                        className="w-8 h-8"
+                        style={{ color: "var(--info)" }}
+                      />
+                    </div>
+                    <h3
+                      className="text-lg font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Generate Flashcards
+                    </h3>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Enter a topic above
+                    </p>
+                  </div>
+                )
+              )}
+            </motion.div>
+          )}
+
+          {/* QUIZ TAB */}
+          {activeTab === "quiz" && (
+            <motion.div
+              key="quiz"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex-1 flex flex-col py-4 overflow-y-auto"
             >
-              <Play className="w-7 h-7 text-white ml-1" />
-            </motion.button>
-          </div>
+              {quiz.length === 0 && !isLoading && (
+                <div
+                  className="flex items-center gap-2 p-2 rounded-xl mb-4"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-medium)",
+                  }}
+                >
+                  <Target
+                    className="w-4 h-4"
+                    style={{ color: "var(--success)" }}
+                  />
+                  <input
+                    type="text"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleGenerateQuizFromTopic(topic)
+                    }
+                    placeholder="Topic for quiz..."
+                    className="flex-1 bg-transparent text-sm outline-none"
+                    style={{ color: "var(--text-primary)" }}
+                  />
+                  <button
+                    onClick={() => handleGenerateQuizFromTopic(topic)}
+                    disabled={!topic.trim() || isLoading}
+                    className="px-3 py-1.5 rounded-lg text-sm cursor-pointer disabled:opacity-50"
+                    style={{ background: "var(--success)", color: "white" }}
+                  >
+                    Start Quiz
+                  </button>
+                </div>
+              )}
 
-          <p style={{ color: "var(--text-secondary)" }}>
-            {selectedLesson.description}. This lesson will help you understand
-            key concepts and develop practical strategies for daily life.
-          </p>
-        </motion.div>
-      )}
+              {quiz.length > 0 && quizIndex < quiz.length ? (
+                <div className="flex-1 flex flex-col">
+                  <div className="flex justify-between items-center mb-2 text-sm">
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      Q{quizIndex + 1}/{quiz.length}
+                    </span>
+                    <span style={{ color: "var(--success)" }}>
+                      Score: {quizScore}
+                    </span>
+                  </div>
+                  <div
+                    className="h-1 rounded-full mb-4"
+                    style={{ background: "var(--bg-tertiary)" }}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${((quizIndex + 1) / quiz.length) * 100}%`,
+                        background: "var(--success)",
+                      }}
+                    />
+                  </div>
 
-      {/* Progress Stats */}
-      <motion.div
-        className="grid grid-cols-3 gap-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <div className="card text-center">
-          <p className="text-3xl font-bold text-gradient">25%</p>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Course Progress
-          </p>
-        </div>
-        <div className="card text-center">
-          <p className="text-3xl font-bold text-gradient">1</p>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Lessons Done
-          </p>
-        </div>
-        <div className="card text-center">
-          <p className="text-3xl font-bold text-gradient">45m</p>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            Learning Time
-          </p>
-        </div>
-      </motion.div>
+                  <div
+                    className="p-4 rounded-xl mb-4"
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border-medium)",
+                    }}
+                  >
+                    <h3
+                      className="text-base font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {quiz[quizIndex]?.question}
+                    </h3>
+                  </div>
+
+                  <div className="space-y-2 flex-1">
+                    {quiz[quizIndex]?.options.map((option, i) => {
+                      const isSelected = selectedAnswer === i;
+                      const isCorrect = i === quiz[quizIndex]?.correctIndex;
+                      const showResult = selectedAnswer !== null;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            if (selectedAnswer === null) {
+                              setSelectedAnswer(i);
+                              if (isCorrect) setQuizScore((prev) => prev + 1);
+                            }
+                          }}
+                          className="w-full p-3 rounded-xl text-left text-sm cursor-pointer transition-all"
+                          style={{
+                            background: showResult
+                              ? isCorrect
+                                ? "var(--success-bg)"
+                                : isSelected
+                                ? "var(--error-bg)"
+                                : "var(--bg-tertiary)"
+                              : "var(--bg-tertiary)",
+                            border: `1px solid ${
+                              showResult
+                                ? isCorrect
+                                  ? "var(--success)"
+                                  : isSelected
+                                  ? "var(--error)"
+                                  : "var(--border-light)"
+                                : "var(--border-light)"
+                            }`,
+                            color: "var(--text-primary)",
+                          }}
+                          disabled={showResult}
+                        >
+                          {option}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedAnswer !== null && (
+                    <>
+                      {quiz[quizIndex]?.explanation && (
+                        <div
+                          className="p-3 rounded-xl mt-3 text-sm"
+                          style={{
+                            background: "var(--info-bg)",
+                            border: "1px solid var(--info)",
+                          }}
+                        >
+                          <strong style={{ color: "var(--info)" }}>
+                            Explanation:
+                          </strong>{" "}
+                          <span style={{ color: "var(--text-primary)" }}>
+                            {quiz[quizIndex].explanation}
+                          </span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => {
+                          setQuizIndex((prev) => prev + 1);
+                          setSelectedAnswer(null);
+                        }}
+                        className="mt-4 py-2 rounded-xl text-sm cursor-pointer flex items-center justify-center gap-1"
+                        style={{
+                          background: "var(--gradient-primary)",
+                          color: "white",
+                        }}
+                      >
+                        {quizIndex < quiz.length - 1 ? (
+                          <>
+                            Next <ArrowRight className="w-3 h-3" />
+                          </>
+                        ) : (
+                          "See Results"
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : quiz.length > 0 && quizIndex >= quiz.length ? (
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <div
+                    className="w-16 h-16 rounded-full mb-4 flex items-center justify-center"
+                    style={{ background: "var(--success-bg)" }}
+                  >
+                    <Target
+                      className="w-8 h-8"
+                      style={{ color: "var(--success)" }}
+                    />
+                  </div>
+                  <h2
+                    className="text-2xl font-bold mb-1"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Quiz Complete! 🎉
+                  </h2>
+                  <p
+                    className="text-lg mb-4"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Score:{" "}
+                    <span style={{ color: "var(--success)" }}>
+                      {quizScore}/{quiz.length}
+                    </span>
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setQuiz([]);
+                        setQuizIndex(0);
+                        setQuizScore(0);
+                      }}
+                      className="px-4 py-2 rounded-lg text-sm cursor-pointer"
+                      style={{
+                        background: "var(--bg-tertiary)",
+                        color: "var(--text-secondary)",
+                      }}
+                    >
+                      New Quiz
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("explore")}
+                      className="px-4 py-2 rounded-lg text-sm cursor-pointer"
+                      style={{
+                        background: "var(--gradient-primary)",
+                        color: "white",
+                      }}
+                    >
+                      Keep Learning
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                !isLoading && (
+                  <div className="flex-1 flex flex-col items-center justify-center">
+                    <div
+                      className="w-16 h-16 rounded-2xl mb-4 flex items-center justify-center"
+                      style={{ background: "var(--success-bg)" }}
+                    >
+                      <Target
+                        className="w-8 h-8"
+                        style={{ color: "var(--success)" }}
+                      />
+                    </div>
+                    <h3
+                      className="text-lg font-semibold"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Test Your Knowledge
+                    </h3>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Enter a topic to generate a quiz
+                    </p>
+                  </div>
+                )
+              )}
+
+              {isLoading && (
+                <div className="flex-1 flex items-center justify-center">
+                  <Loader2
+                    className="w-8 h-8 animate-spin"
+                    style={{ color: "var(--accent-color)" }}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -45,34 +45,51 @@ export function TaskProvider({ children }) {
   }, [tasks]);
 
   const addTask = async (task) => {
+    // Create local task immediately for responsive UI
+    const localTask = {
+      id: `local_${Date.now()}`,
+      _id: `local_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      status: task.status || "pending",
+      priority: task.priority || "medium",
+      energyLevel: task.energyLevel || "medium",
+      sensoryTags: task.sensoryTags || [],
+      estimatedTime: task.estimatedTime || null,
+      dueDate: task.dueDate || null,
+      subtasks: task.subtasks || [],
+      ...task,
+    };
+
+    // Add to state immediately
+    setTasks((prev) => [localTask, ...prev]);
+
+    // Try to sync with API in background
     try {
       const newTask = await tasksAPI.create({
         title: task.title,
         priority: task.priority || "medium",
-        status: "pending",
-        subtasks: [],
+        status: task.status || "pending",
+        energyLevel: task.energyLevel || "medium",
+        sensoryTags: task.sensoryTags || [],
+        estimatedTime: task.estimatedTime || null,
+        dueDate: task.dueDate || null,
+        subtasks: task.subtasks || [],
       });
 
+      // Update with real MongoDB ID
       const transformedTask = {
         ...newTask,
         id: newTask._id,
-        subtasks: [],
+        subtasks: newTask.subtasks?.map((st) => ({ ...st, id: st._id })) || [],
       };
 
-      setTasks((prev) => [transformedTask, ...prev]);
+      setTasks((prev) =>
+        prev.map((t) => (t.id === localTask.id ? transformedTask : t))
+      );
       return transformedTask;
     } catch (err) {
-      console.error("Failed to add task:", err);
-      // Fallback to local-only
-      const localTask = {
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-        status: "pending",
-        priority: task.priority || "medium",
-        subtasks: [],
-        ...task,
-      };
-      setTasks((prev) => [localTask, ...prev]);
+      console.error("Failed to sync task with server:", err);
+      // Task already in state, just return it
       return localTask;
     }
   };
