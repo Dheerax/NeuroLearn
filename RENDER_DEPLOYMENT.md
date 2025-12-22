@@ -51,13 +51,13 @@ VITE_ML_API_URL=https://your-ml-api-url.onrender.com
 
 | Setting        | Value                        |
 | -------------- | ---------------------------- |
-| Name           | `neurolearn-backend`         |
+| Name           | `neurolearn-backend`       |
 | Region         | Choose closest to your users |
-| Branch         | `main`                       |
-| Root Directory | `server`                     |
-| Runtime        | `Node`                       |
-| Build Command  | `npm install`                |
-| Start Command  | `node index.js`              |
+| Branch         | `main`                     |
+| Root Directory | `server`                   |
+| Runtime        | `Node`                     |
+| Build Command  | `npm install`              |
+| Start Command  | `node index.js`            |
 | Instance Type  | Free                         |
 
 5. Add Environment Variables:
@@ -66,7 +66,6 @@ VITE_ML_API_URL=https://your-ml-api-url.onrender.com
    - `JWT_SECRET` = generate a random secret
    - `NODE_ENV` = `production`
    - `PORT` = `3001`
-
 6. Click **Create Web Service**
 
 ---
@@ -77,11 +76,11 @@ VITE_ML_API_URL=https://your-ml-api-url.onrender.com
 2. Connect your GitHub repo
 3. Configure:
 
-| Setting           | Value                          |
-| ----------------- | ------------------------------ |
+| Setting           | Value                            |
+| ----------------- | -------------------------------- |
 | Name              | `neurolearn-frontend`          |
 | Branch            | `main`                         |
-| Root Directory    | `` (leave empty)               |
+| Root Directory    | `` (leave empty)                 |
 | Build Command     | `npm install && npm run build` |
 | Publish Directory | `dist`                         |
 
@@ -89,7 +88,6 @@ VITE_ML_API_URL=https://your-ml-api-url.onrender.com
 
    - `VITE_API_URL` = `https://neurolearn-backend.onrender.com/api`
    - `VITE_GEMINI_API_KEY` = your Gemini API key
-
 5. Click **Create Static Site**
 
 ---
@@ -100,15 +98,15 @@ VITE_ML_API_URL=https://your-ml-api-url.onrender.com
 2. Connect your GitHub repo
 3. Configure:
 
-| Setting        | Value                             |
-| -------------- | --------------------------------- |
+| Setting        | Value                               |
+| -------------- | ----------------------------------- |
 | Name           | `neurolearn-ml-api`               |
 | Branch         | `main`                            |
 | Root Directory | `ml`                              |
 | Runtime        | `Python 3`                        |
 | Build Command  | `pip install -r requirements.txt` |
 | Start Command  | `python api_server.py`            |
-| Instance Type  | Free                              |
+| Instance Type  | Free                                |
 
 4. Add Environment Variables:
    - `PORT` = `5000`
@@ -190,13 +188,11 @@ You can also use `render.yaml` for one-click deploy. See the file in your repo.
 ## Tips for Free Tier
 
 1. **Spin-down**: Free services sleep after 15 mins. Use [cron-job.org](https://cron-job.org) to ping every 14 mins to keep alive.
-
 2. **Upgrade when needed**: For production, use paid tier ($7/month) for:
 
    - No spin-down
    - Custom domains
    - Better performance
-
 3. **Environment**: Set `NODE_ENV=production` for better performance.
 
 ---

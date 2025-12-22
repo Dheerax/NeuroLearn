@@ -1,6 +1,6 @@
 // API utility for frontend to communicate with backend
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
 
 function getToken() {
   return localStorage.getItem("neurolearn_token");
