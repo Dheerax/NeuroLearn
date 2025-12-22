@@ -1,502 +1,474 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   CheckSquare,
   Timer,
   BookOpen,
   MessageCircle,
-  TrendingUp,
   Award,
   Flame,
-  Target,
   Sparkles,
-  ArrowRight,
-  Play,
-  Clock,
+  ArrowUpRight,
   Zap,
   Brain,
-  Heart,
   Gamepad2,
+  Clock,
+  ChevronRight,
+  Play,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTasks } from "../context/TaskContext";
 import { useGamification } from "../context/GamificationContext";
-import { FocusStatusIndicator } from "../components/FocusMonitorUI";
 
-// Animated counter component
-function AnimatedNumber({ value, duration = 1000 }) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    let startTime;
-    const animate = (currentTime) => {
-      if (!startTime) startTime = currentTime;
-      const progress = Math.min((currentTime - startTime) / duration, 1);
-      setDisplayValue(Math.floor(progress * value));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [value, duration]);
-
-  return <span>{displayValue}</span>;
-}
-
-// Stat card component
-function StatCard({ icon: Icon, label, value, color, delay }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="card hover-lift cursor-pointer group"
-    >
-      <div className="flex items-start justify-between">
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-          style={{ background: `${color}20` }}
-        >
-          <Icon className="w-6 h-6" style={{ color }} />
-        </div>
-        <motion.div
-          className="text-right"
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: delay + 0.2, type: "spring" }}
-        >
-          <p className="text-3xl font-display font-bold text-gradient">
-            <AnimatedNumber value={value} />
-          </p>
-          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-            {label}
-          </p>
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-// Quick action button
-function QuickAction({ to, icon: Icon, label, color, delay }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay }}
-    >
-      <Link
-        to={to}
-        className="card flex flex-col items-center gap-3 py-6 hover-lift group text-center"
-      >
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110"
-          style={{
-            background: `linear-gradient(135deg, ${color}, ${color}dd)`,
-          }}
-        >
-          <Icon className="w-7 h-7 text-white" />
-        </div>
-        <p className="font-medium" style={{ color: "var(--text-primary)" }}>
-          {label}
-        </p>
-      </Link>
-    </motion.div>
-  );
-}
-
-// Motivational quotes
 const QUOTES = [
-  {
-    text: "Every step forward counts, no matter how small.",
-    author: "Progress mindset",
-  },
-  {
-    text: "Your brain works differently – that's your superpower.",
-    author: "Neurodiversity",
-  },
-  { text: "Take breaks. Rest is part of the journey.", author: "Self-care" },
-  {
-    text: "Celebrate small wins. They add up to big achievements.",
-    author: "Growth",
-  },
-  { text: "It's okay to do things your own way.", author: "Self-acceptance" },
+  "Every step forward counts.",
+  "Your unique mind is your superpower.",
+  "Small wins build mountains.",
+  "Progress, not perfection.",
+  "You're doing great.",
 ];
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { tasks } = useTasks();
-  const { level, xp, currentStreak, earnedBadges, xpToNextLevel } =
-    useGamification();
-
+  const {
+    level = 1,
+    xp = 0,
+    currentStreak = 0,
+    earnedBadges = [],
+    xpToNextLevel = 100,
+    stats = {},
+  } = useGamification() || {};
   const [quote] = useState(
     () => QUOTES[Math.floor(Math.random() * QUOTES.length)]
   );
+  const [time, setTime] = useState(new Date());
+  const [hoveredNav, setHoveredNav] = useState(null);
 
-  const pendingTasks = tasks.filter((t) => t.status === "pending").length;
-  const completedToday = tasks.filter((t) => {
-    if (!t.completedAt) return false;
-    const today = new Date().toDateString();
-    return new Date(t.completedAt).toDateString() === today;
-  }).length;
-  const inProgressTasks = tasks.filter(
-    (t) => t.status === "in-progress"
-  ).length;
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
-  const xpProgress = (xp / xpToNextLevel) * 100;
+  const completedToday =
+    tasks?.filter((t) => {
+      if (!t.completedAt) return false;
+      return (
+        new Date(t.completedAt).toDateString() === new Date().toDateString()
+      );
+    }).length || 0;
+  const pendingTasks = tasks?.filter((t) => t.status === "pending").length || 0;
+  const xpProgress =
+    xpToNextLevel > 0 ? Math.min((xp / xpToNextLevel) * 100, 100) : 0;
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
-  };
+  const hour = time.getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const navItems = [
+    {
+      id: "tasks",
+      icon: CheckSquare,
+      label: "Tasks",
+      path: "/tasks",
+      stat: pendingTasks,
+    },
+    { id: "focus", icon: Timer, label: "Focus", path: "/focus", stat: null },
+    {
+      id: "learn",
+      icon: BookOpen,
+      label: "Learn",
+      path: "/learning",
+      stat: null,
+    },
+    {
+      id: "social",
+      icon: MessageCircle,
+      label: "Social",
+      path: "/communication",
+      stat: null,
+    },
+    { id: "games", icon: Gamepad2, label: "Games", path: "/games", stat: null },
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl p-6 md:p-8"
-        style={{ background: "var(--gradient-primary)" }}
-      >
-        {/* Background decoration */}
-        <div className="absolute inset-0 opacity-20">
-          <div
-            className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl"
-            style={{ background: "white" }}
-          />
-          <div
-            className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl"
-            style={{ background: "white" }}
-          />
-        </div>
+    <div
+      className="min-h-full relative"
+      style={{ background: "var(--bg-primary)" }}
+    >
+      {/* Subtle ambient gradient */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at top right, rgba(102,126,234,0.05) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(236,72,153,0.03) 0%, transparent 50%)",
+          zIndex: 0,
+        }}
+      />
 
-        <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="text-white">
-            <motion.p
-              className="text-white/80 mb-1"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              {getGreeting()},
-            </motion.p>
-            <motion.h1
-              className="text-3xl md:text-4xl font-display font-bold mb-3"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              {user?.name || "Student"} {user?.avatar}
-            </motion.h1>
-            <motion.p
-              className="text-white/90 max-w-md"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
-              "{quote.text}"{" "}
-              <span className="text-white/60">— {quote.author}</span>
-            </motion.p>
-          </div>
-
-          <motion.div
-            className="flex items-center gap-4"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="glass rounded-2xl p-4 text-white text-center min-w-[100px]">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <Sparkles className="w-5 h-5" />
-                <span className="text-2xl font-bold">Lvl {level}</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-white/20 mt-2">
-                <motion.div
-                  className="h-full rounded-full bg-white"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${xpProgress}%` }}
-                  transition={{ delay: 0.7, duration: 1 }}
-                />
-              </div>
-              <p className="text-xs text-white/70 mt-1">
-                {xp}/{xpToNextLevel} XP
-              </p>
-            </div>
-
-            {currentStreak > 0 && (
-              <div className="glass rounded-2xl p-4 text-white text-center">
-                <Flame className="w-8 h-8 mx-auto mb-1" />
-                <p className="text-2xl font-bold">{currentStreak}</p>
-                <p className="text-xs text-white/70">day streak</p>
-              </div>
-            )}
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Target}
-          label="Pending Tasks"
-          value={pendingTasks}
-          color="#3b82f6"
-          delay={0.1}
-        />
-        <StatCard
-          icon={CheckSquare}
-          label="Completed Today"
-          value={completedToday}
-          color="#10b981"
-          delay={0.2}
-        />
-        <StatCard
-          icon={Zap}
-          label="In Progress"
-          value={inProgressTasks}
-          color="#f59e0b"
-          delay={0.3}
-        />
-        <StatCard
-          icon={Award}
-          label="Badges Earned"
-          value={earnedBadges.length}
-          color="#8b5cf6"
-          delay={0.4}
-        />
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <motion.h2
-          className="text-lg font-semibold mb-4 flex items-center gap-2"
-          style={{ color: "var(--text-primary)" }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <Play className="w-5 h-5" style={{ color: "var(--primary-500)" }} />
-          Quick Actions
-        </motion.h2>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <QuickAction
-            to="/tasks"
-            icon={CheckSquare}
-            label="Manage Tasks"
-            color="#3b82f6"
-            delay={0.1}
-          />
-          <QuickAction
-            to="/focus"
-            icon={Timer}
-            label="Start Focus"
-            color="#10b981"
-            delay={0.2}
-          />
-          <QuickAction
-            to="/learning"
-            icon={BookOpen}
-            label="Learn"
-            color="#f59e0b"
-            delay={0.3}
-          />
-          <QuickAction
-            to="/communication"
-            icon={MessageCircle}
-            label="Practice"
-            color="#8b5cf6"
-            delay={0.4}
-          />
-          <QuickAction
-            to="/games"
-            icon={Gamepad2}
-            label="Games"
-            color="#ec4899"
-            delay={0.5}
-          />
-        </div>
-      </div>
-
-      {/* Focus Status */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-      >
-        <FocusStatusIndicator />
-      </motion.div>
-
-      {/* Two Column Layout */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Recent Tasks */}
-        <motion.div
-          className="card"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="font-semibold flex items-center gap-2"
-              style={{ color: "var(--text-primary)" }}
-            >
-              <Clock
-                className="w-5 h-5"
-                style={{ color: "var(--primary-500)" }}
-              />
-              Recent Tasks
-            </h2>
-            <Link
-              to="/tasks"
-              className="text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all"
-              style={{ color: "var(--primary-500)" }}
-            >
-              View all <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="space-y-3">
-            {tasks.slice(0, 4).map((task, index) => (
-              <motion.div
-                key={task.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
-                className="flex items-center gap-3 p-3 rounded-xl transition-colors"
-                style={{ background: "var(--bg-secondary)" }}
-              >
-                <div
-                  className={`w-3 h-3 rounded-full ${
-                    task.status === "completed"
-                      ? "bg-green-500"
-                      : task.status === "in-progress"
-                      ? "bg-yellow-500"
-                      : "bg-gray-400"
-                  }`}
-                />
-                <p
-                  className="flex-1 truncate"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {task.title}
-                </p>
-                <span
-                  className={`badge badge-${
-                    task.priority === "high" || task.priority === "urgent"
-                      ? "warning"
-                      : "primary"
-                  }`}
-                >
-                  {task.priority}
-                </span>
-              </motion.div>
-            ))}
-
-            {tasks.length === 0 && (
-              <div className="text-center py-8">
-                <Brain
-                  className="w-12 h-12 mx-auto mb-3"
-                  style={{ color: "var(--text-tertiary)" }}
-                />
-                <p style={{ color: "var(--text-secondary)" }}>No tasks yet</p>
-                <Link to="/tasks" className="btn-primary mt-4 inline-flex">
-                  Create your first task
-                </Link>
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Badges & Achievements */}
-        <motion.div
-          className="card"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2
-              className="font-semibold flex items-center gap-2"
-              style={{ color: "var(--text-primary)" }}
-            >
-              <Award className="w-5 h-5" style={{ color: "var(--warning)" }} />
-              Your Achievements
-            </h2>
-          </div>
-
-          {earnedBadges.length > 0 ? (
-            <div className="grid grid-cols-4 gap-3">
-              {earnedBadges.slice(0, 8).map((badge, index) => (
-                <motion.div
-                  key={badge.id}
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5 + index * 0.1, type: "spring" }}
-                  className="flex flex-col items-center p-3 rounded-xl text-center hover-scale cursor-pointer"
-                  style={{ background: "var(--bg-secondary)" }}
-                  title={badge.name}
-                >
-                  <span className="text-3xl mb-1">{badge.icon}</span>
-                  <span
-                    className="text-xs truncate w-full"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    {badge.name}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div
-                className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center"
-                style={{ background: "var(--bg-tertiary)" }}
-              >
-                <Award
-                  className="w-8 h-8"
-                  style={{ color: "var(--text-tertiary)" }}
-                />
-              </div>
-              <p style={{ color: "var(--text-secondary)" }} className="mb-1">
-                No badges yet
-              </p>
-              <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
-                Complete tasks to earn achievements!
-              </p>
-            </div>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Daily Tip */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="card-glass flex items-start gap-4 p-6"
-      >
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "rgba(239, 68, 68, 0.1)" }}
-        >
-          <Heart className="w-6 h-6" style={{ color: "#ef4444" }} />
-        </div>
-        <div>
-          <h3
-            className="font-semibold mb-1"
+      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
+        {/* Time & Greeting */}
+        <div className="text-center mb-12">
+          <p
+            className="text-6xl md:text-7xl font-light tracking-tight mb-2"
             style={{ color: "var(--text-primary)" }}
           >
-            Daily Wellness Tip
-          </h3>
-          <p style={{ color: "var(--text-secondary)" }}>
-            Remember to take regular breaks! Studies show that stepping away
-            from work actually improves focus and creativity. Try the Pomodoro
-            technique in Focus Mode.
+            {time.toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+          <p className="text-lg" style={{ color: "var(--text-tertiary)" }}>
+            {greeting},{" "}
+            <span style={{ color: "var(--text-primary)" }}>
+              {user?.name || "friend"}
+            </span>
+          </p>
+          <p
+            className="text-sm italic mt-4"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            "{quote}"
           </p>
         </div>
-      </motion.div>
+
+        {/* Stats Row */}
+        <div className="flex flex-wrap justify-center gap-3 mb-12">
+          {/* Level */}
+          <div
+            className="flex items-center gap-3 px-5 py-3 rounded-full"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-light)",
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                Level
+              </p>
+              <p
+                className="text-xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {level}
+              </p>
+            </div>
+            <div
+              className="w-16 h-1.5 rounded-full ml-2"
+              style={{ background: "var(--bg-tertiary)" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  background: "var(--gradient-primary)",
+                  width: `${xpProgress}%`,
+                }}
+              />
+            </div>
+          </div>
+
+          {/* XP */}
+          <div
+            className="flex items-center gap-3 px-5 py-3 rounded-full"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-light)",
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
+              }}
+            >
+              <Zap className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                Total XP
+              </p>
+              <p
+                className="text-xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {stats?.totalXP || xp}
+              </p>
+            </div>
+          </div>
+
+          {/* Streak */}
+          {currentStreak > 0 && (
+            <div
+              className="flex items-center gap-3 px-5 py-3 rounded-full"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border-light)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #ef4444 0%, #f97316 100%)",
+                }}
+              >
+                <Flame className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p
+                  className="text-xs"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  Streak
+                </p>
+                <p
+                  className="text-xl font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {currentStreak} days
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Badges */}
+          <div
+            className="flex items-center gap-3 px-5 py-3 rounded-full"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-light)",
+            }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)",
+              }}
+            >
+              <Award className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+                Badges
+              </p>
+              <p
+                className="text-xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                {earnedBadges?.length || 0}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {navItems.map((item) => (
+            <Link
+              key={item.id}
+              to={item.path}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all"
+              style={{
+                background:
+                  hoveredNav === item.id ? "var(--surface)" : "transparent",
+                border: `1px solid ${
+                  hoveredNav === item.id
+                    ? "var(--border-medium)"
+                    : "transparent"
+                }`,
+              }}
+              onMouseEnter={() => setHoveredNav(item.id)}
+              onMouseLeave={() => setHoveredNav(null)}
+            >
+              <item.icon
+                className="w-5 h-5"
+                style={{
+                  color:
+                    hoveredNav === item.id
+                      ? "var(--accent-color)"
+                      : "var(--text-tertiary)",
+                }}
+              />
+              <span
+                className="font-medium"
+                style={{
+                  color:
+                    hoveredNav === item.id
+                      ? "var(--text-primary)"
+                      : "var(--text-secondary)",
+                }}
+              >
+                {item.label}
+              </span>
+              {item.stat !== null && item.stat > 0 && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs font-bold text-white"
+                  style={{ background: "var(--accent-color)" }}
+                >
+                  {item.stat}
+                </span>
+              )}
+            </Link>
+          ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-center gap-3 mb-12">
+          <button
+            onClick={() => navigate("/focus")}
+            className="flex items-center gap-2 px-6 py-3 rounded-full font-medium text-white transition-transform hover:scale-105"
+            style={{ background: "var(--gradient-primary)" }}
+          >
+            <Play className="w-4 h-4" />
+            Start Focus Session
+          </button>
+
+          <button
+            onClick={() => navigate("/tasks")}
+            className="flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-transform hover:scale-105"
+            style={{
+              background: "var(--surface)",
+              color: "var(--text-primary)",
+              border: "1px solid var(--border-light)",
+            }}
+          >
+            <CheckSquare className="w-4 h-4" />
+            Add Task
+          </button>
+        </div>
+
+        {/* Recent Tasks */}
+        {tasks && tasks.length > 0 && (
+          <div className="max-w-lg mx-auto mb-12">
+            <div className="flex items-center justify-between mb-4 px-2">
+              <p
+                className="text-sm font-medium"
+                style={{ color: "var(--text-tertiary)" }}
+              >
+                Recent Activity
+              </p>
+              <Link
+                to="/tasks"
+                className="text-sm flex items-center gap-1"
+                style={{ color: "var(--accent-color)" }}
+              >
+                View all <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            <div className="space-y-2">
+              {tasks.slice(0, 3).map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 p-4 rounded-2xl transition-all hover:translate-x-1"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-light)",
+                  }}
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      task.status === "completed"
+                        ? "bg-green-500"
+                        : task.status === "in-progress"
+                        ? "bg-yellow-500"
+                        : "bg-gray-400"
+                    }`}
+                  />
+                  <span
+                    className="flex-1 truncate"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {task.title}
+                  </span>
+                  <Clock
+                    className="w-4 h-4"
+                    style={{ color: "var(--text-tertiary)" }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {(!tasks || tasks.length === 0) && (
+          <div className="text-center py-12">
+            <Brain
+              className="w-16 h-16 mx-auto mb-4"
+              style={{ color: "var(--text-tertiary)" }}
+            />
+            <p
+              className="text-lg mb-2"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Your journey begins here
+            </p>
+            <p
+              className="text-sm mb-6"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              Create your first task to get started
+            </p>
+            <button
+              onClick={() => navigate("/tasks")}
+              className="px-6 py-3 rounded-full font-medium text-white"
+              style={{ background: "var(--gradient-primary)" }}
+            >
+              Create Task
+            </button>
+          </div>
+        )}
+
+        {/* Badges Preview */}
+        {earnedBadges && earnedBadges.length > 0 && (
+          <div className="flex justify-center gap-2 mb-8">
+            {earnedBadges.slice(0, 5).map((badge) => (
+              <div
+                key={badge.id}
+                className="w-12 h-12 rounded-full flex items-center justify-center text-2xl transition-transform hover:scale-110"
+                style={{
+                  background: "var(--surface)",
+                  border: "1px solid var(--border-light)",
+                }}
+                title={badge.name}
+              >
+                {badge.icon}
+              </div>
+            ))}
+            {earnedBadges.length > 5 && (
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium"
+                style={{
+                  background: "var(--bg-tertiary)",
+                  color: "var(--text-tertiary)",
+                }}
+              >
+                +{earnedBadges.length - 5}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+            {completedToday > 0
+              ? `🎉 You've completed ${completedToday} task${
+                  completedToday > 1 ? "s" : ""
+                } today!`
+              : "Ready to make today count?"}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

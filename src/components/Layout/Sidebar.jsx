@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   LayoutDashboard,
   CheckSquare,
@@ -13,11 +13,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  Palette,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useGamification } from "../../context/GamificationContext";
-import { useTheme, THEMES } from "../../context/ThemeContext";
 
 const NAV_ITEMS = [
   {
@@ -67,13 +65,12 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
-  const { level, xp, xpToNextLevel } = useGamification();
-  const { theme, setTheme, themes } = useTheme();
+  const { level = 1, xp = 0, xpToNextLevel = 100 } = useGamification() || {};
 
   const [collapsed, setCollapsed] = useState(false);
-  const [showThemes, setShowThemes] = useState(false);
 
-  const xpProgress = (xp / xpToNextLevel) * 100;
+  const xpProgress =
+    xpToNextLevel > 0 ? Math.min((xp / xpToNextLevel) * 100, 100) : 0;
 
   return (
     <motion.aside
@@ -221,65 +218,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Theme Switcher */}
-      <div className="px-3 pb-3">
-        <button
-          onClick={() => setShowThemes(!showThemes)}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 ${
-            collapsed ? "justify-center" : ""
-          }`}
-          style={{
-            background: showThemes ? "var(--surface-hover)" : "transparent",
-            color: "var(--text-secondary)",
-          }}
-        >
-          <Palette className="w-5 h-5" />
-          {!collapsed && <span className="text-sm font-medium">Theme</span>}
-          {!collapsed && (
-            <span className="ml-auto text-lg">{THEMES[theme].icon}</span>
-          )}
-        </button>
-
-        <AnimatePresence>
-          {showThemes && !collapsed && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden mt-2"
-            >
-              <div
-                className="grid grid-cols-5 gap-2 p-2 rounded-xl"
-                style={{ background: "var(--bg-tertiary)" }}
-              >
-                {Object.values(THEMES).map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setTheme(t.id);
-                      setShowThemes(false);
-                    }}
-                    className={`w-full aspect-square rounded-lg flex items-center justify-center text-lg transition-all ${
-                      theme === t.id
-                        ? "ring-2 ring-offset-2 scale-110"
-                        : "hover:scale-105"
-                    }`}
-                    style={{
-                      background: t.colors.surface,
-                      ringColor: "var(--primary-500)",
-                      ringOffsetColor: "var(--bg-tertiary)",
-                    }}
-                    title={t.name}
-                  >
-                    {t.icon}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
       {/* User Level Card */}
       <div className="p-3">

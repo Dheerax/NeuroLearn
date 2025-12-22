@@ -1,0 +1,62 @@
+services:
+  # Backend API Service
+  - type: web
+    name: neurolearn-backend
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: MONGODB_URI
+        sync: false # Set manually in dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        fromService:
+          name: neurolearn-frontend
+          type: web
+          property: url
+    healthCheckPath: /api/health
+
+  # Frontend Static Site
+  - type: web
+    name: neurolearn-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: neurolearn-backend
+          type: web
+          property: url
+      - key: VITE_GEMINI_API_KEY
+        sync: false # Set manually in dashboard
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  # ML API Service (Optional)
+  - type: web
+    name: neurolearn-ml-api
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: python api_server.py
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: FLASK_ENV
+        value: production
+    healthCheckPath: /health

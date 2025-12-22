@@ -1,9 +1,106 @@
 /* Import theme system first */
 @import "./styles/themes.css";
 
+/* Import OpenDyslexic font for dyslexia mode */
+@import url('https://fonts.cdnfonts.com/css/opendyslexic');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   ACCESSIBILITY STYLES
+   ============================================ */
+
+/* Font size CSS variable - controlled by AccessibilityContext */
+:root {
+  --base-font-size: 16px;
+}
+
+html {
+  font-size: var(--base-font-size);
+}
+
+/* Dyslexia-friendly font */
+body.dyslexia-font,
+body.dyslexia-font * {
+  font-family: 'OpenDyslexic', sans-serif !important;
+  letter-spacing: 0.05em;
+  word-spacing: 0.1em;
+  line-height: 1.8;
+}
+
+/* High contrast mode */
+body.high-contrast {
+  --text-primary: #000000 !important;
+  --text-secondary: #1a1a1a !important;
+  --text-tertiary: #333333 !important;
+  --bg-primary: #ffffff !important;
+  --bg-secondary: #f5f5f5 !important;
+  --border-light: #000000 !important;
+  --border-medium: #000000 !important;
+}
+
+body.high-contrast[data-theme="dark"],
+body.high-contrast.theme-dark {
+  --text-primary: #ffffff !important;
+  --text-secondary: #f0f0f0 !important;
+  --text-tertiary: #e0e0e0 !important;
+  --bg-primary: #000000 !important;
+  --bg-secondary: #0a0a0a !important;
+  --border-light: #ffffff !important;
+  --border-medium: #ffffff !important;
+}
+
+/* Reduced motion */
+body.reduced-motion,
+body.reduced-motion * {
+  animation: none !important;
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.reduced-motion-override),
+  body:not(.reduced-motion-override) * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Color blind modes */
+body.colorblind-protanopia {
+  filter: url('#protanopia-filter');
+}
+
+body.colorblind-deuteranopia {
+  filter: url('#deuteranopia-filter');
+}
+
+body.colorblind-tritanopia {
+  filter: url('#tritanopia-filter');
+}
+
+/* Alternative: CSS-based color adjustments for color blindness */
+body.colorblind-protanopia {
+  --primary-500: #0066cc;
+  --success: #0066cc;
+  --warning: #cc6600;
+  --error: #cc6600;
+}
+
+body.colorblind-deuteranopia {
+  --primary-500: #0066cc;
+  --success: #0066cc;
+  --warning: #cc6600;
+  --error: #cc6600;
+}
+
+body.colorblind-tritanopia {
+  --primary-500: #cc0066;
+  --success: #006666;
+  --warning: #cc0066;
+  --error: #cc0000;
+}
 
 /* ============================================
    BASE STYLES

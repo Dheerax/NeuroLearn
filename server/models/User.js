@@ -59,6 +59,101 @@ const userSchema = new mongoose.Schema(
         enum: ["low", "medium", "high"],
         default: "medium",
       },
+      // Accessibility Settings
+      accessibility: {
+        fontSize: {
+          type: String,
+          enum: ["small", "medium", "large", "extra-large"],
+          default: "medium",
+        },
+        dyslexiaFont: {
+          type: Boolean,
+          default: false,
+        },
+        highContrast: {
+          type: Boolean,
+          default: false,
+        },
+        reducedMotion: {
+          type: Boolean,
+          default: false,
+        },
+        screenReader: {
+          type: Boolean,
+          default: false,
+        },
+        colorBlindMode: {
+          type: String,
+          enum: ["none", "protanopia", "deuteranopia", "tritanopia"],
+          default: "none",
+        },
+      },
+      // Privacy Settings
+      privacy: {
+        analyticsEnabled: {
+          type: Boolean,
+          default: true,
+        },
+        shareProgress: {
+          type: Boolean,
+          default: false,
+        },
+        showStreak: {
+          type: Boolean,
+          default: true,
+        },
+      },
+      // Keyboard Shortcuts
+      keyboardShortcuts: {
+        enabled: {
+          type: Boolean,
+          default: true,
+        },
+        customBindings: {
+          type: Map,
+          of: String,
+          default: {},
+        },
+      },
+      // Advanced Notifications
+      advancedNotifications: {
+        dailyReminder: {
+          type: Boolean,
+          default: true,
+        },
+        dailyReminderTime: {
+          type: String,
+          default: "09:00",
+        },
+        weeklyReport: {
+          type: Boolean,
+          default: true,
+        },
+        achievementAlerts: {
+          type: Boolean,
+          default: true,
+        },
+        focusEndSound: {
+          type: String,
+          enum: ["none", "chime", "bell", "nature"],
+          default: "chime",
+        },
+      },
+      // Session Settings
+      session: {
+        autoStartTimer: {
+          type: Boolean,
+          default: false,
+        },
+        showTimeRemaining: {
+          type: Boolean,
+          default: true,
+        },
+        pauseOnInactivity: {
+          type: Boolean,
+          default: true,
+        },
+      },
     },
     profile: {
       conditions: [
@@ -91,6 +186,20 @@ const userSchema = new mongoose.Schema(
       focusSessions: { type: Number, default: 0 },
       breakdowns: { type: Number, default: 0 },
     },
+    // Custom Social Scenarios
+    customScenarios: [
+      {
+        id: { type: String, required: true },
+        title: { type: String, required: true },
+        desc: { type: String, default: "" },
+        icon: { type: String, default: "MessageCircle" },
+        gradient: {
+          type: String,
+          default: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   {
     timestamps: true,

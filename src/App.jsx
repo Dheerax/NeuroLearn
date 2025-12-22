@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AccessibilityProvider } from "./context/AccessibilityContext";
 import { UserProvider } from "./context/UserContext";
 import { TaskProvider } from "./context/TaskContext";
 import { GamificationProvider } from "./context/GamificationContext";
@@ -112,18 +113,20 @@ function App() {
     <Router>
       <ThemeProvider>
         <AuthProvider>
-          <UserProvider>
-            <TaskProvider>
-              <GamificationProvider>
-                <FocusMonitorProvider>
-                  <FocusProvider>
-                    <AppRoutes />
-                    <DistractionAlert />
-                  </FocusProvider>
-                </FocusMonitorProvider>
-              </GamificationProvider>
-            </TaskProvider>
-          </UserProvider>
+          <AccessibilityProvider>
+            <UserProvider>
+              <TaskProvider>
+                <GamificationProvider>
+                  <FocusMonitorProvider>
+                    <FocusProvider>
+                      <AppRoutes />
+                      <DistractionAlert />
+                    </FocusProvider>
+                  </FocusMonitorProvider>
+                </GamificationProvider>
+              </TaskProvider>
+            </UserProvider>
+          </AccessibilityProvider>
         </AuthProvider>
       </ThemeProvider>
     </Router>

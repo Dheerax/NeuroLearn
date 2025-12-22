@@ -93,4 +93,190 @@ router.patch("/me/gamification", async (req, res) => {
   }
 });
 
+// Export all user settings as JSON
+router.get("/me/settings/export", async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      version: "1.0",
+      settings: {
+        name: user.name,
+        avatar: user.avatar,
+        preferences: user.preferences,
+        profile: user.profile,
+      },
+    };
+
+    res.json(exportData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Import settings from JSON
+router.post("/me/settings/import", async (req, res) => {
+  try {
+    const { settings } = req.body;
+
+    if (!settings) {
+      return res.status(400).json({ error: "No settings data provided" });
+    }
+
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Apply imported settings
+    if (settings.name) user.name = settings.name;
+    if (settings.avatar) user.avatar = settings.avatar;
+    if (settings.preferences) {
+      user.preferences = {
+        ...(user.preferences.toObject?.() || user.preferences),
+        ...settings.preferences,
+      };
+    }
+    if (settings.profile) {
+      user.profile = {
+        ...(user.profile.toObject?.() || user.profile),
+        ...settings.profile,
+      };
+    }
+
+    await user.save();
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset settings to defaults
+router.post("/me/settings/reset", async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Reset to defaults
+    user.preferences = {
+      learningStyle: "visual",
+      breakInterval: 25,
+      breakDuration: 5,
+      theme: "light",
+      notifications: true,
+      soundEnabled: true,
+      focusIntensity: "medium",
+      accessibility: {
+        fontSize: "medium",
+        dyslexiaFont: false,
+        highContrast: false,
+        reducedMotion: false,
+        screenReader: false,
+        colorBlindMode: "none",
+      },
+      privacy: {
+        analyticsEnabled: true,
+        shareProgress: false,
+        showStreak: true,
+      },
+      keyboardShortcuts: {
+        enabled: true,
+        customBindings: new Map(),
+      },
+      advancedNotifications: {
+        dailyReminder: true,
+        dailyReminderTime: "09:00",
+        weeklyReport: true,
+        achievementAlerts: true,
+        focusEndSound: "chime",
+      },
+      session: {
+        autoStartTimer: false,
+        showTimeRemaining: true,
+        pauseOnInactivity: true,
+      },
+    };
+
+    await user.save();
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all custom scenarios
+router.get("/me/scenarios", async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(user.customScenarios || []);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a new custom scenario
+router.post("/me/scenarios", async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const { title, desc, icon, gradient } = req.body;
+
+    if (!title) {
+      return res.status(400).json({ error: "Title is required" });
+    }
+
+    const newScenario = {
+      id: `custom-${Date.now()}`,
+      title,
+      desc: desc || "",
+      icon: icon || "MessageCircle",
+      gradient: gradient || "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      createdAt: new Date(),
+    };
+
+    user.customScenarios.push(newScenario);
+    await user.save();
+
+    res.status(201).json(newScenario);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete a custom scenario
+router.delete("/me/scenarios/:id", async (req, res) => {
+  try {
+    const user = await User.findOne();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const scenarioId = req.params.id;
+    const index = user.customScenarios.findIndex((s) => s.id === scenarioId);
+
+    if (index === -1) {
+      return res.status(404).json({ error: "Scenario not found" });
+    }
+
+    user.customScenarios.splice(index, 1);
+    await user.save();
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

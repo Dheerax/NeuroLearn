@@ -21,53 +21,123 @@ import {
   Star,
   Award,
   ChevronRight,
+  Plus,
+  Briefcase,
+  UserPlus,
+  HelpCircle,
+  HandMetal,
+  MessageCircle,
+  HeartHandshake,
+  Trash2,
+  Palette,
+  Check,
+  BookOpen,
 } from "lucide-react";
 import { useGamification } from "../context/GamificationContext";
+import { useAuth } from "../context/AuthContext";
 import geminiAI from "../services/geminiAI";
 
+// Preset scenarios with lucide icons
 const SCENARIOS = [
   {
     id: "job-interview",
     title: "Job Interview",
     desc: "Ace your next interview",
-    emoji: "💼",
+    icon: "Briefcase",
     gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
   },
   {
     id: "making-friends",
     title: "Making Friends",
     desc: "Connect with new people",
-    emoji: "👋",
+    icon: "UserPlus",
     gradient: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
   },
   {
     id: "asking-help",
     title: "Asking for Help",
     desc: "Request assistance confidently",
-    emoji: "🙋",
+    icon: "HelpCircle",
     gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
   },
   {
     id: "boundaries",
     title: "Setting Boundaries",
     desc: "Say no respectfully",
-    emoji: "🛑",
+    icon: "HandMetal",
     gradient: "linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)",
   },
   {
     id: "small-talk",
     title: "Small Talk",
     desc: "Master casual conversation",
-    emoji: "💬",
+    icon: "MessageCircle",
     gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
   },
   {
     id: "apologizing",
     title: "Apologizing",
     desc: "Make genuine apologies",
-    emoji: "🙏",
+    icon: "HeartHandshake",
     gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
   },
+];
+
+// Icon map for dynamic rendering
+const ICON_MAP = {
+  Briefcase,
+  UserPlus,
+  HelpCircle,
+  HandMetal,
+  MessageCircle,
+  HeartHandshake,
+  Users,
+  Star,
+  Sparkles,
+  BookOpen,
+  Play,
+  Mic,
+  Eye,
+};
+
+// Gradient options for custom scenarios
+const GRADIENT_OPTIONS = [
+  {
+    id: "purple",
+    gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+  },
+  {
+    id: "green",
+    gradient: "linear-gradient(135deg, #11998e 0%, #38ef7d 100%)",
+  },
+  { id: "pink", gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)" },
+  {
+    id: "orange",
+    gradient: "linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)",
+  },
+  { id: "blue", gradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)" },
+  {
+    id: "yellow",
+    gradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+  },
+  { id: "teal", gradient: "linear-gradient(135deg, #2af598 0%, #009efd 100%)" },
+  { id: "red", gradient: "linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)" },
+];
+
+// Icon options for custom scenarios
+const ICON_OPTIONS = [
+  "MessageCircle",
+  "Users",
+  "Star",
+  "Sparkles",
+  "BookOpen",
+  "Play",
+  "Mic",
+  "Eye",
+  "Briefcase",
+  "UserPlus",
+  "HelpCircle",
+  "HeartHandshake",
 ];
 
 const EMOTIONS = [
@@ -100,6 +170,7 @@ const EMOTIONS = [
 
 export default function CommunicationPage() {
   const { addXP, stats } = useGamification();
+  const { token } = useAuth();
   const [mode, setMode] = useState("home");
   const [selectedScenario, setSelectedScenario] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -125,6 +196,80 @@ export default function CommunicationPage() {
   const chatRef = useRef(null);
   const isListeningRef = useRef(false);
 
+  // Custom scenarios state
+  const [customScenarios, setCustomScenarios] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newScenario, setNewScenario] = useState({
+    title: "",
+    desc: "",
+    icon: "MessageCircle",
+    gradient: GRADIENT_OPTIONS[0].gradient,
+  });
+  const [hoveredScenario, setHoveredScenario] = useState(null);
+
+  // Fetch custom scenarios on mount
+  useEffect(() => {
+    fetchCustomScenarios();
+  }, []);
+
+  const fetchCustomScenarios = async () => {
+    try {
+      const res = await fetch("/api/users/me/scenarios", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCustomScenarios(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch scenarios:", error);
+    }
+  };
+
+  const createScenario = async () => {
+    if (!newScenario.title.trim()) return;
+
+    try {
+      const res = await fetch("/api/users/me/scenarios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(newScenario),
+      });
+
+      if (res.ok) {
+        const created = await res.json();
+        setCustomScenarios((prev) => [...prev, created]);
+        setShowCreateModal(false);
+        setNewScenario({
+          title: "",
+          desc: "",
+          icon: "MessageCircle",
+          gradient: GRADIENT_OPTIONS[0].gradient,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to create scenario:", error);
+    }
+  };
+
+  const deleteScenario = async (id) => {
+    try {
+      const res = await fetch(`/api/users/me/scenarios/${id}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (res.ok) {
+        setCustomScenarios((prev) => prev.filter((s) => s.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete scenario:", error);
+    }
+  };
+
   // Keep ref in sync with state
   useEffect(() => {
     isListeningRef.current = isListening;
@@ -140,7 +285,6 @@ export default function CommunicationPage() {
       let ft = "";
 
       recognitionRef.current.onresult = (e) => {
-        // Stop TTS when user starts speaking
         if (speechSynthesis.speaking) {
           speechSynthesis.cancel();
           setIsSpeaking(false);
@@ -172,7 +316,6 @@ export default function CommunicationPage() {
       };
 
       recognitionRef.current.onend = () => {
-        // Only auto-restart if still supposed to be listening and in practice mode
         if (
           isListeningRef.current &&
           conversationMode === "voice" &&
@@ -247,25 +390,21 @@ export default function CommunicationPage() {
       return alert("Please use Chrome for voice features.");
 
     if (isListening) {
-      // Stop listening
       try {
         recognitionRef.current.stop();
       } catch (e) {}
       setIsListening(false);
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     } else {
-      // Start listening - first stop any TTS that's playing
       speechSynthesis.cancel();
       setIsSpeaking(false);
       setInput("");
 
-      // Small delay to ensure TTS is stopped before starting recognition
       setTimeout(() => {
         try {
           recognitionRef.current.start();
           setIsListening(true);
         } catch (e) {
-          // If already started, stop and restart
           try {
             recognitionRef.current.stop();
             setTimeout(() => {
@@ -362,10 +501,12 @@ export default function CommunicationPage() {
       } catch (e) {}
     setIsListening(false);
   };
+
   const handleEmotionPick = (opt) => {
     setEmotionChoice(opt);
     if (opt === EMOTIONS[emotionIdx].answer) setEmotionScore((p) => p + 1);
   };
+
   const nextEmotion = () => {
     if (emotionIdx < EMOTIONS.length - 1) {
       setEmotionIdx((p) => p + 1);
@@ -375,19 +516,26 @@ export default function CommunicationPage() {
       addXP(emotionScore * 15, "emotion_quiz");
     }
   };
+
   const resetEmotion = () => {
     setEmotionIdx(0);
     setEmotionChoice(null);
     setEmotionScore(0);
     setShowEmotionResults(false);
   };
+
   const markChallengeDone = () => {
     setChallengeDone(true);
     localStorage.setItem("social_challenge_date", new Date().toDateString());
     addXP(challenge?.xpReward || 25, "social_challenge");
   };
 
+  // Helper to get Icon component
+  const getIcon = (iconName) => ICON_MAP[iconName] || MessageCircle;
+
+  // Practice mode view (unchanged)
   if (mode === "practice" && selectedScenario) {
+    const ScenarioIcon = getIcon(selectedScenario.icon);
     return (
       <div
         className="fixed inset-0 z-50 flex flex-col"
@@ -406,10 +554,10 @@ export default function CommunicationPage() {
           </button>
           <div className="flex items-center gap-2">
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-lg"
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: selectedScenario.gradient }}
             >
-              {selectedScenario.emoji}
+              <ScenarioIcon className="w-4 h-4 text-white" />
             </div>
             <span
               className="font-medium text-sm"
@@ -620,6 +768,7 @@ export default function CommunicationPage() {
     );
   }
 
+  // Emotion quiz view (unchanged)
   if (mode === "emotion") {
     return (
       <div
@@ -808,68 +957,211 @@ export default function CommunicationPage() {
     );
   }
 
+  // HOME VIEW - NEW CIRCULAR LAYOUT
   return (
-    <div className="min-h-full" style={{ background: "var(--bg-primary)" }}>
-      {/* Hero Section */}
-      <div
-        className="relative overflow-hidden rounded-2xl mb-6"
-        style={{
-          background:
-            "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
-        }}
-      >
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-4 right-4 w-32 h-32 rounded-full bg-white/20 blur-2xl" />
-          <div className="absolute bottom-4 left-4 w-24 h-24 rounded-full bg-white/10 blur-xl" />
-        </div>
-        <div className="relative p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-white">
-                  Social Skills Lab
-                </h1>
-                <p className="text-white/70 text-sm">
-                  AI-powered practice & coaching
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur">
-              <Zap className="w-4 h-4 text-yellow-300" />
-              <span className="font-bold text-white text-sm">
-                {stats?.totalXP || 0} XP
-              </span>
-            </div>
+    <div
+      className="min-h-full pb-8"
+      style={{ background: "var(--bg-primary)" }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <Users className="w-6 h-6 text-white" />
           </div>
-          <div className="flex gap-2 p-1 rounded-xl bg-white/10 backdrop-blur">
+          <div>
+            <h1
+              className="text-xl font-bold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              Social Skills Lab
+            </h1>
+            <p className="text-sm" style={{ color: "var(--text-tertiary)" }}>
+              Practice with AI scenarios
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Mode Toggle */}
+          <div
+            className="flex gap-1 p-1 rounded-xl"
+            style={{ background: "var(--bg-tertiary)" }}
+          >
             <button
               onClick={() => setConversationMode("voice")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all cursor-pointer ${
-                conversationMode === "voice"
-                  ? "bg-white text-purple-600 shadow-lg"
-                  : "text-white/80 hover:bg-white/10"
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all ${
+                conversationMode === "voice" ? "bg-white shadow-sm" : ""
               }`}
+              style={{
+                color:
+                  conversationMode === "voice"
+                    ? "var(--primary-500)"
+                    : "var(--text-tertiary)",
+              }}
             >
               <Radio className="w-4 h-4" />
-              <span className="font-medium text-sm">Voice Mode</span>
+              Voice
             </button>
             <button
               onClick={() => setConversationMode("text")}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all cursor-pointer ${
-                conversationMode === "text"
-                  ? "bg-white text-purple-600 shadow-lg"
-                  : "text-white/80 hover:bg-white/10"
+              className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-sm font-medium transition-all ${
+                conversationMode === "text" ? "bg-white shadow-sm" : ""
               }`}
+              style={{
+                color:
+                  conversationMode === "text"
+                    ? "var(--primary-500)"
+                    : "var(--text-tertiary)",
+              }}
             >
               <MessageSquare className="w-4 h-4" />
-              <span className="font-medium text-sm">Text Mode</span>
+              Text
             </button>
           </div>
         </div>
       </div>
+
+      {/* CIRCULAR HUB LAYOUT */}
+      <div
+        className="relative flex items-center justify-center mb-8"
+        style={{ height: "420px" }}
+      >
+        {/* Central Hub - Create Custom Scenario */}
+        <motion.button
+          onClick={() => setShowCreateModal(true)}
+          className="absolute z-10 w-32 h-32 rounded-full flex flex-col items-center justify-center cursor-pointer"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--primary-500) 0%, var(--accent-color) 100%)",
+            boxShadow: "0 8px 32px rgba(102, 126, 234, 0.4)",
+          }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Plus className="w-8 h-8 text-white mb-1" />
+          <span className="text-white text-xs font-medium text-center px-2">
+            Create Scenario
+          </span>
+        </motion.button>
+
+        {/* Orbiting Scenarios */}
+        {SCENARIOS.map((scenario, index) => {
+          const angle = (index * 60 - 90) * (Math.PI / 180); // Distribute evenly in circle, starting from top
+          const radius = 150; // Distance from center
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          const IconComponent = getIcon(scenario.icon);
+          const isHovered = hoveredScenario === scenario.id;
+
+          return (
+            <motion.button
+              key={scenario.id}
+              onClick={() => startScenario(scenario)}
+              onMouseEnter={() => setHoveredScenario(scenario.id)}
+              onMouseLeave={() => setHoveredScenario(null)}
+              className="absolute cursor-pointer"
+              style={{
+                left: `calc(50% + ${x}px - 48px)`,
+                top: `calc(50% + ${y}px - 48px)`,
+              }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ scale: 1.15, zIndex: 20 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <div
+                className="w-24 h-24 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden"
+                style={{
+                  background: scenario.gradient,
+                  boxShadow: isHovered
+                    ? "0 12px 40px rgba(0,0,0,0.3)"
+                    : "0 4px 16px rgba(0,0,0,0.15)",
+                }}
+              >
+                <IconComponent className="w-8 h-8 text-white mb-1" />
+                <span className="text-white text-[10px] font-medium text-center px-1 leading-tight">
+                  {scenario.title}
+                </span>
+              </div>
+            </motion.button>
+          );
+        })}
+
+        {/* Connecting lines (decorative) */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          style={{ zIndex: 0 }}
+        >
+          <circle
+            cx="50%"
+            cy="50%"
+            r="150"
+            fill="none"
+            stroke="var(--border-light)"
+            strokeWidth="1"
+            strokeDasharray="4 4"
+            opacity="0.5"
+          />
+        </svg>
+      </div>
+
+      {/* Saved Custom Scenarios */}
+      {customScenarios.length > 0 && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="mb-6"
+        >
+          <h2
+            className="font-semibold mb-3 flex items-center gap-2"
+            style={{ color: "var(--text-primary)" }}
+          >
+            <Sparkles
+              className="w-5 h-5"
+              style={{ color: "var(--accent-color)" }}
+            />
+            Your Scenarios
+          </h2>
+          <div
+            className="flex gap-3 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: "none" }}
+          >
+            {customScenarios.map((scenario) => {
+              const IconComponent = getIcon(scenario.icon);
+              return (
+                <motion.div
+                  key={scenario.id}
+                  className="relative shrink-0 group"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                >
+                  <button
+                    onClick={() => startScenario(scenario)}
+                    className="w-28 h-28 rounded-xl flex flex-col items-center justify-center cursor-pointer overflow-hidden"
+                    style={{ background: scenario.gradient }}
+                  >
+                    <IconComponent className="w-6 h-6 text-white mb-1" />
+                    <span className="text-white text-xs font-medium text-center px-2 line-clamp-2">
+                      {scenario.title}
+                    </span>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteScenario(scenario.id);
+                    }}
+                    className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ background: "var(--error)", color: "white" }}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Daily Challenge */}
       <motion.div
@@ -942,60 +1234,11 @@ export default function CommunicationPage() {
         </div>
       </motion.div>
 
-      {/* Scenarios Grid */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="mb-6"
-      >
-        <h2
-          className="font-semibold mb-3 flex items-center gap-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          <Play className="w-5 h-5" style={{ color: "var(--accent-color)" }} />
-          Practice Scenarios
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {SCENARIOS.map((s, i) => (
-            <motion.button
-              key={s.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.05 }}
-              onClick={() => startScenario(s)}
-              className="relative overflow-hidden rounded-xl p-4 text-left cursor-pointer group"
-              style={{ background: s.gradient }}
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-              <div className="relative z-10">
-                <span className="text-3xl mb-2 block">{s.emoji}</span>
-                <h3 className="font-semibold text-white text-sm mb-0.5">
-                  {s.title}
-                </h3>
-                <p className="text-white/70 text-xs">{s.desc}</p>
-                <div className="flex items-center gap-1 mt-2 text-white/60 text-xs">
-                  {conversationMode === "voice" ? (
-                    <Mic className="w-3 h-3" />
-                  ) : (
-                    <MessageSquare className="w-3 h-3" />
-                  )}
-                  <span>{conversationMode === "voice" ? "Voice" : "Text"}</span>
-                  <ChevronRight className="w-3 h-3 ml-auto group-hover:translate-x-1 transition-transform" />
-                </div>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
-
       {/* Emotion Quiz Card */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.2 }}
         className="mb-6"
       >
         <button
@@ -1041,7 +1284,7 @@ export default function CommunicationPage() {
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.3 }}
       >
         <h2
           className="font-semibold mb-3 flex items-center gap-2"
@@ -1075,6 +1318,197 @@ export default function CommunicationPage() {
           ))}
         </div>
       </motion.div>
+
+      {/* Create Scenario Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.6)" }}
+            onClick={() => setShowCreateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md rounded-2xl p-6"
+              style={{ background: "var(--surface)" }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2
+                  className="text-xl font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Create Scenario
+                </h2>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: "var(--bg-tertiary)" }}
+                >
+                  <X
+                    className="w-4 h-4"
+                    style={{ color: "var(--text-secondary)" }}
+                  />
+                </button>
+              </div>
+
+              {/* Preview */}
+              <div className="flex justify-center mb-6">
+                <div
+                  className="w-24 h-24 rounded-2xl flex flex-col items-center justify-center"
+                  style={{ background: newScenario.gradient }}
+                >
+                  {(() => {
+                    const PreviewIcon = getIcon(newScenario.icon);
+                    return <PreviewIcon className="w-8 h-8 text-white mb-1" />;
+                  })()}
+                  <span className="text-white text-[10px] font-medium text-center px-1 line-clamp-2">
+                    {newScenario.title || "Title"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Title Input */}
+              <div className="mb-4">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={newScenario.title}
+                  onChange={(e) =>
+                    setNewScenario({ ...newScenario, title: e.target.value })
+                  }
+                  placeholder="e.g., First Date"
+                  className="w-full px-4 py-3 rounded-xl outline-none"
+                  style={{
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-light)",
+                  }}
+                />
+              </div>
+
+              {/* Description Input */}
+              <div className="mb-4">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  value={newScenario.desc}
+                  onChange={(e) =>
+                    setNewScenario({ ...newScenario, desc: e.target.value })
+                  }
+                  placeholder="e.g., Practice conversation starters"
+                  className="w-full px-4 py-3 rounded-xl outline-none"
+                  style={{
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-primary)",
+                    border: "1px solid var(--border-light)",
+                  }}
+                />
+              </div>
+
+              {/* Icon Picker */}
+              <div className="mb-4">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Icon
+                </label>
+                <div className="flex gap-2 flex-wrap">
+                  {ICON_OPTIONS.map((iconName) => {
+                    const IconComp = getIcon(iconName);
+                    const isSelected = newScenario.icon === iconName;
+                    return (
+                      <button
+                        key={iconName}
+                        onClick={() =>
+                          setNewScenario({ ...newScenario, icon: iconName })
+                        }
+                        className="w-10 h-10 rounded-lg flex items-center justify-center transition-all"
+                        style={{
+                          background: isSelected
+                            ? "var(--primary-500)"
+                            : "var(--bg-tertiary)",
+                          border: isSelected
+                            ? "none"
+                            : "1px solid var(--border-light)",
+                        }}
+                      >
+                        <IconComp
+                          className="w-5 h-5"
+                          style={{
+                            color: isSelected
+                              ? "white"
+                              : "var(--text-secondary)",
+                          }}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Color Picker */}
+              <div className="mb-6">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Color
+                </label>
+                <div className="flex gap-2">
+                  {GRADIENT_OPTIONS.map((opt) => {
+                    const isSelected = newScenario.gradient === opt.gradient;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() =>
+                          setNewScenario({
+                            ...newScenario,
+                            gradient: opt.gradient,
+                          })
+                        }
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{ background: opt.gradient }}
+                      >
+                        {isSelected && <Check className="w-5 h-5 text-white" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Create Button */}
+              <button
+                onClick={createScenario}
+                disabled={!newScenario.title.trim()}
+                className="w-full py-3 rounded-xl font-semibold disabled:opacity-50 transition-all"
+                style={{
+                  background: "var(--gradient-primary)",
+                  color: "white",
+                }}
+              >
+                Create Scenario
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
