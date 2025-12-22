@@ -14,7 +14,7 @@ import { FocusMonitorProvider } from "./context/FocusMonitorContext";
 import { FocusProvider } from "./context/FocusContext";
 import Layout from "./components/Layout/Layout";
 import DistractionAlert from "./components/DistractionAlert";
-import AICompanion from "./components/AICompanion";
+import AICompanions from "./components/AICompanion";
 import Dashboard from "./pages/Dashboard";
 import TasksPage from "./pages/TasksPage";
 import LearningPage from "./pages/LearningPage";
